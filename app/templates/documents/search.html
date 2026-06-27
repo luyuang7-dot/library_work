@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}搜索文献{% endblock %}
+{% block content %}
+<section class="doc-search">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <h3 class="mb-0">搜索文献</h3>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('documents.list_documents') }}">
+      <i class="bi bi-arrow-left"></i> 返回文献库
+    </a>
+  </div>
+
+  <form id="doc-search-form" method="get" action="{{ url_for('documents.search') }}">
+    <div class="input-group input-group-lg mb-2">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <input type="search" name="q" value="{{ q }}" class="form-control"
+             placeholder="搜索标题、摘要、作者、来源、关键词、标签或 DOI" autofocus>
+      <button class="btn btn-primary" type="submit">搜索</button>
+      <button class="btn btn-outline-secondary" type="button"
+              data-bs-toggle="collapse" data-bs-target="#doc-search-filters">
+        <i class="bi bi-funnel"></i> 筛选
+      </button>
+    </div>
+
+    <div class="collapse {% if author or source or active_category or active_type or active_year or year_from or year_to or reading_status or rating_min %}show{% endif %}"
+         id="doc-search-filters">
+      <div class="card card-body mb-3">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label small text-muted mb-1">作者</label>
+            <input type="text" name="author" value="{{ author }}" class="form-control"
+                   list="author-options" placeholder="作者姓名">
+            <datalist id="author-options">
+              {% for a in authors %}<option value="{{ a.name }}">{% endfor %}
+            </datalist>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small text-muted mb-1">期刊 / 来源</label>
+            <input type="text" name="source" value="{{ source }}" class="form-control"
+                   list="source-options" placeholder="期刊或来源名称">
+            <datalist id="source-options">
+              {% for s in sources %}<option value="{{ s.name }}">{% endfor %}
+            </datalist>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small text-muted mb-1">分类</label>
+            <select name="category" class="form-select">
+              <option value="">全部分类</option>
+              {% for c in categories %}
+              <option value="{{ c.id }}" {% if active_category == c.id %}selected{% endif %}>
+                {{ '— ' * (c.depth or 0) }}{{ c.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small text-muted mb-1">类型</label>
+            <select name="type" class="form-select">
+              <option value="">所有类型</option>
+              {% for v, label in [('journal_article', '期刊论文'), ('conference_paper', '会议论文'), ('book', '图书'), ('thesis', '学位论文'), ('report', '报告'), ('other', '其他')] %}
+              <option value="{{ v }}" {% if active_type == v %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small text-muted mb-1">阅读状态</label>
+            <select name="reading_status" class="form-select">
+              <option value="">全部状态</option>
+              {% for v, label in [('unread', '未读'), ('reading', '在读'), ('read', '已读')] %}
+              <option value="{{ v }}" {% if reading_status == v %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small text-muted mb-1">年份从</label>
+            <input type="number" name="year_from" value="{{ year_from or '' }}" class="form-control" placeholder="如 2018">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small text-muted mb-1">年份到</label>
+            <input type="number" name="year_to" value="{{ year_to or '' }}" class="form-control" placeholder="如 2024">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small text-muted mb-1">最低评分</label>
+            <select name="rating_min" class="form-select">
+              <option value="0">不限</option>
+              {% for n in [1, 2, 3, 4, 5] %}
+              <option value="{{ n }}" {% if rating_min == n %}selected{% endif %}>{{ '★' * n }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3 d-flex align-items-end gap-2">
+            <button class="btn btn-primary flex-grow-1" type="submit">应用筛选</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('documents.search') }}">清空</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if tags %}
+    <div class="doc-search-tags mb-3">
+      <div class="small text-muted mb-2">
+        <i class="bi bi-tags"></i> 标签（可多选，命中越多排序越靠前）
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        {% for t in tags %}
+        <label class="tag-chip">
+          <input type="checkbox" name="tags" value="{{ t.id }}"
+                 {% if t.id in selected_tag_ids %}checked{% endif %} data-tag-checkbox>
+          <span class="tag-badge tag-badge--{{ t.name|tag_color }}">{{ t.name }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </form>
+
+  <div class="small text-muted mb-2">
+    {% if selected_tag_total %}
+      已选 {{ selected_tag_total }} 个标签，命中文献 {{ total }} 篇（按命中标签数排序）。
+    {% else %}
+      共 {{ total }} 篇文献。
+    {% endif %}
+  </div>
+
+  {% if documents %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 34%;">标题</th>
+          <th>作者</th>
+          <th>来源</th>
+          <th>年份</th>
+          <th>标签</th>
+          {% if selected_tag_total %}<th>命中</th>{% endif %}
+          <th>状态</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in documents %}
+        <tr>
+          <td>
+            <a class="text-decoration-none" href="{{ url_for('documents.detail', doc_id=d.id) }}">
+              <strong>{{ d.title }}</strong>
+            </a>
+            {% if d.rating %}<span class="text-warning">{{ '★' * d.rating }}</span>{% endif %}
+          </td>
+          <td>{{ d.authors_display or '—' }}</td>
+          <td>{{ d.source.name if d.source else '—' }}</td>
+          <td>{{ d.publication_year or '—' }}</td>
+          <td>
+            {% for t in d.tags %}
+            <span class="tag-badge tag-badge--{{ t.name|tag_color }} {% if t.id in selected_tag_ids %}is-active{% endif %}">{{ t.name }}</span>
+            {% else %}—{% endfor %}
+          </td>
+          {% if selected_tag_total %}
+          <td><span class="badge bg-secondary">{{ d.match_count }}/{{ selected_tag_total }}</span></td>
+          {% endif %}
+          <td>
+            {% if d.reading_status == 'read' %}<span class="badge bg-success">已读</span>
+            {% elif d.reading_status == 'reading' %}<span class="badge bg-warning text-dark">在读</span>
+            {% else %}<span class="badge bg-secondary">未读</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pages > 1 %}
+  <nav class="mt-3">
+    <ul class="pagination justify-content-center flex-wrap gap-1">
+      <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+        <a class="page-link" href="{{ page_url(page - 1) }}">上一页</a>
+      </li>
+      <li class="page-item disabled"><span class="page-link">第 {{ page }} / {{ pages }} 页</span></li>
+      <li class="page-item {% if page >= pages %}disabled{% endif %}">
+        <a class="page-link" href="{{ page_url(page + 1) }}">下一页</a>
+      </li>
+    </ul>
+  </nav>
+  {% endif %}
+  {% else %}
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-search" style="font-size: 2rem;"></i>
+    <p class="mt-2 mb-0">没有匹配的文献，换个关键词或调整筛选条件试试。</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+  document.querySelectorAll("[data-tag-checkbox]").forEach(box => {
+    box.addEventListener("change", () => {
+      const form = document.getElementById("doc-search-form");
+      if (form) form.submit();
+    });
+  });
+</script>
+{% endblock %}

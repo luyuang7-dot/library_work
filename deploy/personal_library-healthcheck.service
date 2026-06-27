@@ -1,0 +1,14 @@
+[Unit]
+Description=Personal Library scheduled health probe
+After=network.target personal_library.service
+Wants=personal_library.service
+OnFailure=personal_library-alert@%n.service
+
+[Service]
+Type=oneshot
+User=library
+Group=www-data
+WorkingDirectory=/opt/personal_library/current
+EnvironmentFile=/opt/personal_library/.env
+Environment=FLASK_ENV=prod
+ExecStart=/bin/bash /opt/personal_library/current/scripts/check_runtime_health.sh http://127.0.0.1:8000

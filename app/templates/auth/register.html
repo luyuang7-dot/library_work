@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}注册{% endblock %}
+{% block content %}
+<section class="auth-shell auth-shell--register" data-auth-scene data-auth-mode="register">
+  <div class="auth-layout card border-0 overflow-hidden">
+    <div class="auth-hero">
+      <div class="auth-hero__brand">
+        <span class="auth-hero__brand-mark"><i class="bi bi-stars"></i></span>
+        <span class="auth-hero__brand-text">{{ app_name }}</span>
+      </div>
+
+      <div class="auth-hero__story">
+        <span class="auth-hero__eyebrow">创建账号</span>
+        <h1 class="auth-hero__title">为课程项目搭建你的专属文献工作台。</h1>
+        <p class="auth-hero__copy">
+          注册后即可准备文献记录、搭建分类结构，并在审核通过后使用 PDF 识别与 BibTeX 工作流。
+        </p>
+      </div>
+
+      <div class="auth-characters" aria-hidden="true">
+        <div class="auth-character auth-character--orange" data-auth-character="orange">
+          <div class="auth-character__face auth-character__face--orange" data-auth-face>
+            <div class="auth-eye auth-eye--dot">
+              <span class="auth-eye__pupil" data-auth-pupil></span>
+            </div>
+            <div class="auth-eye auth-eye--dot">
+              <span class="auth-eye__pupil" data-auth-pupil></span>
+            </div>
+          </div>
+        </div>
+        <div class="auth-character auth-character--purple" data-auth-character="purple">
+          <div class="auth-character__face auth-character__face--purple" data-auth-face>
+            <div class="auth-eye" data-auth-eye>
+              <span class="auth-eye__white"></span>
+              <span class="auth-eye__pupil" data-auth-pupil></span>
+            </div>
+            <div class="auth-eye" data-auth-eye>
+              <span class="auth-eye__white"></span>
+              <span class="auth-eye__pupil" data-auth-pupil></span>
+            </div>
+          </div>
+        </div>
+        <div class="auth-character auth-character--charcoal" data-auth-character="charcoal">
+          <div class="auth-character__face auth-character__face--charcoal" data-auth-face>
+            <div class="auth-eye auth-eye--compact" data-auth-eye>
+              <span class="auth-eye__white"></span>
+              <span class="auth-eye__pupil" data-auth-pupil></span>
+            </div>
+            <div class="auth-eye auth-eye--compact" data-auth-eye>
+              <span class="auth-eye__white"></span>
+              <span class="auth-eye__pupil" data-auth-pupil></span>
+            </div>
+          </div>
+        </div>
+        <div class="auth-character auth-character--gold" data-auth-character="gold">
+          <div class="auth-character__face auth-character__face--gold" data-auth-face>
+            <div class="auth-eye auth-eye--dot">
+              <span class="auth-eye__pupil" data-auth-pupil></span>
+            </div>
+            <div class="auth-eye auth-eye--dot">
+              <span class="auth-eye__pupil" data-auth-pupil></span>
+            </div>
+          </div>
+          <span class="auth-character__mouth"></span>
+        </div>
+      </div>
+
+      <div class="auth-hero__footer">
+        <span>个人文献库</span>
+        <span>PDF 识别</span>
+        <span>课程项目</span>
+      </div>
+    </div>
+
+    <div class="auth-panel">
+      <div class="auth-panel__inner">
+        <div class="auth-panel__header">
+          <span class="auth-panel__eyebrow">新用户注册</span>
+          <h2 class="auth-panel__title">创建新账号</h2>
+          <p class="auth-panel__copy">提交注册后需要等待管理员审核，通过后才能登录完整系统。</p>
+        </div>
+
+        <form method="post" class="auth-form" data-auth-form>
+          {{ csrf_input() }}
+
+          <div class="auth-form__group">
+            <label class="form-label auth-form__label" for="username">用户名</label>
+            <input
+              class="form-control auth-form__control"
+              id="username"
+              name="username"
+              required
+              autofocus
+              autocomplete="username"
+              placeholder="请输入用户名"
+              data-auth-text-input
+            >
+          </div>
+
+          <div class="auth-form__group">
+            <label class="form-label auth-form__label" for="email">邮箱（选填）</label>
+            <input
+              class="form-control auth-form__control"
+              id="email"
+              type="email"
+              name="email"
+              autocomplete="email"
+              placeholder="请输入邮箱地址"
+              data-auth-text-input
+            >
+          </div>
+
+          <div class="auth-form__group">
+            <label class="form-label auth-form__label" for="password">密码</label>
+            <div class="auth-form__password-wrap">
+              <input
+                class="form-control auth-form__control auth-form__control--password"
+                id="password"
+                type="password"
+                name="password"
+                required
+                autocomplete="new-password"
+                placeholder="至少 8 位字符"
+                data-auth-password
+              >
+              <button
+                class="auth-form__toggle"
+                type="button"
+                aria-label="显示或隐藏密码"
+                data-auth-password-toggle
+              >
+                <i class="bi bi-eye" data-auth-eye-icon="show"></i>
+                <i class="bi bi-eye-slash d-none" data-auth-eye-icon="hide"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="auth-form__group">
+            <label class="form-label auth-form__label" for="password2">确认密码</label>
+            <div class="auth-form__password-wrap">
+              <input
+                class="form-control auth-form__control auth-form__control--password"
+                id="password2"
+                type="password"
+                name="password2"
+                required
+                autocomplete="new-password"
+                placeholder="请再次输入密码"
+                data-auth-password
+              >
+              <button
+                class="auth-form__toggle"
+                type="button"
+                aria-label="显示或隐藏密码"
+                data-auth-password-toggle
+              >
+                <i class="bi bi-eye" data-auth-eye-icon="show"></i>
+                <i class="bi bi-eye-slash d-none" data-auth-eye-icon="hide"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="auth-form__tips">
+            <strong>密码规则：</strong>至少 8 位，并且至少包含字母、数字、符号中的两类。
+          </div>
+
+          <button class="btn btn-primary auth-form__submit" type="submit">注册</button>
+
+          <div class="auth-form__divider"><span>或</span></div>
+
+          <button class="auth-form__social" type="button" data-auth-social>
+            <i class="bi bi-google auth-form__social-icon" aria-hidden="true"></i>
+            使用 Google 继续
+          </button>
+          <p class="auth-form__social-note d-none" data-auth-social-note>
+            当前课程项目版本暂未启用第三方注册，请先使用用户名和密码完成注册。
+          </p>
+        </form>
+
+        <div class="auth-panel__meta">
+          <span>已有账号？</span>
+          <a href="{{ url_for('auth.login') }}">返回登录</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/auth_scene.js', v=app_version) }}"></script>
+{% endblock %}

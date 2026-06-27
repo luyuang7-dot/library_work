@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+{% block title %}日志{% endblock %}
+{% block content %}
+<style>
+  .journal-head {
+    border: 1px solid color-mix(in srgb, var(--bs-border-color) 78%, transparent);
+    border-radius: 16px;
+    padding: .9rem 1rem;
+    background:
+      radial-gradient(900px 220px at 8% -25%, color-mix(in srgb, #22c55e 18%, transparent), transparent 68%),
+      color-mix(in srgb, var(--bs-body-bg) 88%, var(--bs-secondary-bg));
+  }
+  .journal-grid {
+    border: 1px solid color-mix(in srgb, var(--bs-border-color) 78%, transparent);
+    border-radius: 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-gutter: stable both-edges;
+  }
+  .journal-scroll-content {
+    min-width: 1100px;
+  }
+  .journal-header {
+    display: grid;
+    grid-template-columns: minmax(780px, 7fr) minmax(230px, 2fr);
+    background: color-mix(in srgb, var(--bs-body-bg) 86%, var(--bs-secondary-bg));
+    border-bottom: 1px solid color-mix(in srgb, var(--bs-border-color) 78%, transparent);
+  }
+  .journal-header-days {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(100px, 1fr));
+  }
+  .journal-header div {
+    padding: .55rem .65rem;
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--bs-secondary-color);
+    letter-spacing: .02em;
+  }
+  .journal-header-weekly {
+    border-left: 1px solid color-mix(in srgb, var(--bs-border-color) 72%, transparent);
+  }
+  .journal-week {
+    border-bottom: 1px solid color-mix(in srgb, var(--bs-border-color) 72%, transparent);
+  }
+  .journal-week:last-child { border-bottom: 0; }
+  .journal-week-label {
+    padding: .45rem .7rem;
+    font-size: .75rem;
+    color: var(--bs-secondary-color);
+    border-bottom: 1px dashed color-mix(in srgb, var(--bs-border-color) 70%, transparent);
+    background: color-mix(in srgb, var(--bs-body-bg) 92%, var(--bs-secondary-bg));
+  }
+  .journal-week-main {
+    display: grid;
+    grid-template-columns: minmax(780px, 7fr) minmax(230px, 2fr);
+  }
+  .journal-days {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(100px, 1fr));
+  }
+  .journal-day {
+    min-height: 165px;
+    padding: .55rem;
+    border-right: 1px solid color-mix(in srgb, var(--bs-border-color) 70%, transparent);
+  }
+  .journal-day:last-child { border-right: 0; }
+  .journal-day.is-outside { opacity: .5; }
+  .journal-day.is-today {
+    background: color-mix(in srgb, #22c55e 15%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, #22c55e 40%, transparent);
+  }
+  .day-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 999px;
+    font-size: .82rem;
+    font-weight: 700;
+    margin-bottom: .45rem;
+    background: color-mix(in srgb, var(--bs-secondary-bg) 82%, transparent);
+    border: 1px solid color-mix(in srgb, var(--bs-border-color) 75%, transparent);
+  }
+  .journal-empty {
+    color: var(--bs-secondary-color);
+    font-size: .75rem;
+    font-style: italic;
+  }
+  .journal-preview,
+  .weekly-preview {
+    width: 100%;
+    text-align: left;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .journal-preview {
+    border: 1px solid color-mix(in srgb, var(--bs-border-color) 74%, transparent);
+    background: color-mix(in srgb, var(--bs-secondary-bg) 80%, transparent);
+    padding: .42rem .5rem;
+    font-size: .76rem;
+    line-height: 1.4;
+    white-space: normal;
+    max-height: none;
+    overflow: hidden;
+  }
+  .journal-preview:hover {
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--bs-border-color));
+    background: color-mix(in srgb, var(--hover-tint) 65%, var(--bs-secondary-bg));
+  }
+  .weekly-note-col {
+    position: relative;
+    border-left: 1px solid color-mix(in srgb, var(--bs-border-color) 72%, transparent);
+    padding: .55rem .65rem;
+    background: color-mix(in srgb, var(--bs-body-bg) 94%, var(--bs-secondary-bg));
+    min-height: 100%;
+  }
+  .weekly-preview {
+    position: absolute;
+    inset: .55rem .65rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    border: 1px solid color-mix(in srgb, #3b82f6 35%, transparent);
+    background: color-mix(in srgb, #3b82f6 10%, transparent);
+    padding: .4rem .5rem;
+    font-size: .74rem;
+    white-space: normal;
+    max-height: none;
+    overflow: hidden;
+    min-height: calc(100% - 1.1rem);
+  }
+  .weekly-preview:hover {
+    border-color: color-mix(in srgb, #3b82f6 60%, transparent);
+    background: color-mix(in srgb, #3b82f6 16%, transparent);
+  }
+  .preview-hint {
+    display: block;
+    margin-top: .35rem;
+    font-size: .7rem;
+    color: var(--bs-secondary-color);
+  }
+  .preview-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .4rem;
+    margin-bottom: .26rem;
+    font-weight: 700;
+  }
+  .preview-label {
+    font-size: .78rem;
+    line-height: 1.25;
+  }
+  .preview-emoji {
+    flex: 0 0 auto;
+    color: #f59e0b;
+    font-weight: 800;
+    font-size: .8rem;
+  }
+  .preview-summary {
+    font-size: .72rem;
+    line-height: 1.35;
+    color: var(--bs-secondary-color);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .weekly-note-empty {
+    color: var(--bs-secondary-color);
+    font-size: .76rem;
+    font-style: italic;
+    line-height: 1.45;
+  }
+  .journal-modal-md {
+    line-height: 1.6;
+    word-break: break-word;
+  }
+  .journal-modal-md h1,
+  .journal-modal-md h2,
+  .journal-modal-md h3,
+  .journal-modal-md h4,
+  .journal-modal-md h5,
+  .journal-modal-md h6 {
+    margin-top: .85rem;
+    margin-bottom: .45rem;
+  }
+  .journal-modal-md p,
+  .journal-modal-md ul,
+  .journal-modal-md ol {
+    margin-bottom: .55rem;
+  }
+  .journal-modal-md code {
+    background: color-mix(in srgb, var(--bs-secondary-bg) 82%, transparent);
+    border-radius: .35rem;
+    padding: .1rem .32rem;
+  }
+  .journal-modal-md pre {
+    background: color-mix(in srgb, var(--bs-secondary-bg) 78%, transparent);
+    border: 1px solid color-mix(in srgb, var(--bs-border-color) 72%, transparent);
+    border-radius: .5rem;
+    padding: .6rem .7rem;
+  }
+</style>
+
+<div class="journal-head mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+  <div>
+    <h4 class="mb-1">日志看板</h4>
+    <div class="small text-muted">公历周视图（每行 7 天）</div>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('journals.index', year=prev_year, month=prev_month) }}">
+      <i class="bi bi-chevron-left"></i> 上月
+    </a>
+    <span class="badge bg-secondary">{{ month_label }}</span>
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('journals.index', year=next_year, month=next_month) }}">
+      下月 <i class="bi bi-chevron-right"></i>
+    </a>
+  </div>
+</div>
+
+<div class="journal-grid">
+  <div class="journal-scroll-content">
+  <div class="journal-header">
+    <div class="journal-header-days">
+      <div>周一</div><div>周二</div><div>周三</div><div>周四</div><div>周五</div><div>周六</div><div>周日</div>
+    </div>
+    <div class="journal-header-weekly">周札</div>
+  </div>
+  {% for week in weeks %}
+  {% set week_journal = weekly_map.get(week[0]) %}
+  <div class="journal-week">
+    <div class="journal-week-label">
+      第 {{ loop.index }} 周 · {{ week[0].isoformat() }} - {{ week[6].isoformat() }}
+      {% if week_journal %}<span class="ms-2 badge bg-primary-subtle text-primary border">已有周札</span>{% endif %}
+    </div>
+    <div class="journal-week-main">
+      <div class="journal-days">
+        {% for day in week %}
+        {% set item = daily_map.get(day) %}
+        <div class="journal-day {% if day.month != month %}is-outside{% endif %} {% if day == today %}is-today{% endif %}">
+          <div class="day-number">{{ day.day }}</div>
+          {% if item %}
+            <button
+              class="journal-preview"
+              type="button"
+              data-bs-toggle="modal"
+              data-bs-target="#journalDetailModal"
+              data-journal-title="{{ item.title }}"
+              data-journal-content="{{ item.content }}"
+            >
+              <span class="preview-main">
+                <span class="preview-label">{{ item.label }}</span>
+                <span class="preview-emoji">{{ item.emoji }}</span>
+              </span>
+              <span class="preview-summary">{{ item.summary }}</span>
+              <span class="preview-hint">点击查看完整日志</span>
+            </button>
+          {% else %}
+            <div class="journal-empty">暂无当日日志</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <aside class="weekly-note-col">
+        {% if week_journal %}
+          <button
+            class="weekly-preview"
+            type="button"
+            data-bs-toggle="modal"
+            data-bs-target="#journalDetailModal"
+            data-journal-title="{{ week_journal.title }}"
+            data-journal-content="{{ week_journal.content }}"
+          >
+            <span class="preview-main">
+              <span class="preview-label">{{ week_journal.label }}</span>
+              <span class="preview-emoji">{{ week_journal.emoji }}</span>
+            </span>
+            <span class="preview-summary">{{ week_journal.summary }}</span>
+            <span class="preview-hint">点击查看完整周札</span>
+          </button>
+        {% else %}
+          <div class="weekly-note-empty">本周暂无周札</div>
+        {% endif %}
+      </aside>
+    </div>
+  </div>
+  {% endfor %}
+  </div>
+</div>
+
+<div class="modal fade" id="journalDetailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="journalDetailTitle">日志详情</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+      </div>
+      <div class="modal-body">
+        <div id="journalDetailContent" class="journal-modal-md"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">关闭</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const modal = document.getElementById("journalDetailModal");
+  if (!modal) return;
+  const titleEl = document.getElementById("journalDetailTitle");
+  const contentEl = document.getElementById("journalDetailContent");
+
+  function escapeHtml(text) {
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function renderMarkdown(content) {
+    if (window.marked && typeof window.marked.parse === "function") {
+      contentEl.innerHTML = window.marked.parse(content || "");
+      return;
+    }
+    contentEl.innerHTML = `<pre class="mb-0" style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(content || "")}</pre>`;
+  }
+
+  modal.addEventListener("show.bs.modal", event => {
+    const trigger = event.relatedTarget;
+    if (!trigger) return;
+    titleEl.textContent = trigger.getAttribute("data-journal-title") || "日志详情";
+    renderMarkdown(trigger.getAttribute("data-journal-content") || "");
+  });
+});
+</script>
+<script src="{{ url_for('static', filename='vendor/marked.min.js', v=app_version) }}"></script>
+{% endblock %}

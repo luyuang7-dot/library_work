@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}分类管理{% endblock %}
+
+{% macro render_node(node, level=0) %}
+  {% set has_children = node.children|length > 0 %}
+  <li class="tree-node level-{{ level }}">
+    <div class="tree-node-row">
+      <div class="tree-node-main">
+        {% if has_children %}
+          <button class="tree-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#children-{{ node.node.id }}" aria-expanded="true" aria-controls="children-{{ node.node.id }}">
+            <i class="bi bi-chevron-down"></i>
+          </button>
+        {% else %}
+          <span class="tree-toggle-placeholder"></span>
+        {% endif %}
+        <span class="tree-pill">
+          <i class="bi bi-folder2-open me-1"></i>{{ node.node.name }}
+        </span>
+      </div>
+      <div class="btn-group btn-group-sm">
+        <button class="btn btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#rename-{{ node.node.id }}">重命名</button>
+        <form method="post" action="{{ url_for('categories.delete', cat_id=node.node.id) }}" onsubmit="return confirm('删除分类？其下文献会变为未分类。');">
+          {{ csrf_input() }}
+          <button class="btn btn-outline-danger" type="submit">删除</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="collapse mt-2" id="rename-{{ node.node.id }}">
+      <form class="row g-2" method="post" action="{{ url_for('categories.rename', cat_id=node.node.id) }}">
+        {{ csrf_input() }}
+        <div class="col"><input class="form-control" name="name" value="{{ node.node.name }}" required></div>
+        <div class="col-auto"><button class="btn btn-dark" type="submit">保存</button></div>
+      </form>
+    </div>
+
+    {% if has_children %}
+      <ul class="tree-children collapse show" id="children-{{ node.node.id }}">
+        {% for child in node.children %}{{ render_node(child, level + 1) }}{% endfor %}
+      </ul>
+    {% endif %}
+  </li>
+{% endmacro %}
+
+{% block content %}
+<style>
+  .category-shell { max-width: 1020px; margin: 0 auto; }
+  .category-card {
+    border-radius: 20px;
+    border: 1px solid color-mix(in srgb, var(--bs-border-color) 78%, transparent);
+    overflow: hidden;
+    background:
+      radial-gradient(1200px 260px at 15% -10%, color-mix(in srgb, var(--bs-primary) 9%, transparent), transparent 60%),
+      radial-gradient(900px 220px at 95% -30%, color-mix(in srgb, var(--bs-success) 7%, transparent), transparent 70%),
+      var(--bs-body-bg);
+    box-shadow: 0 18px 48px rgba(15, 20, 30, .08);
+  }
+  .category-card .card-header {
+    background: color-mix(in srgb, var(--bs-body-bg) 84%, var(--bs-secondary-bg));
+    border-bottom: 1px solid color-mix(in srgb, var(--bs-border-color) 78%, transparent);
+    backdrop-filter: blur(4px);
+  }
+  .category-tabs { gap: .55rem; }
+  .category-tabs .nav-link {
+    border-radius: 999px;
+    padding: .5rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--bs-border-color) 70%, transparent);
+    background: color-mix(in srgb, var(--bs-secondary-bg) 80%, transparent);
+    transition: all .22s ease;
+  }
+  .category-tabs .nav-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(20, 30, 40, .08);
+  }
+  .category-tabs .nav-link.active {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 10px 20px rgba(17, 24, 39, .22);
+  }
+
+  .tree-root, .tree-children { list-style: none; margin: 0; padding: 0; }
+  .tree-children {
+    margin-top: .45rem;
+    margin-left: 1.4rem;
+    border-left: 1px dashed color-mix(in srgb, var(--bs-border-color) 74%, transparent);
+    padding-left: .9rem;
+  }
+  .tree-node { padding: .44rem 0; }
+  .tree-node-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    flex-wrap: wrap;
+    border-radius: 12px;
+    padding: .2rem .1rem;
+    transition: background-color .2s ease, transform .2s ease;
+  }
+  .tree-node-row:hover {
+    background: color-mix(in srgb, var(--bs-secondary-bg) 65%, transparent);
+    transform: translateX(2px);
+  }
+  .tree-node-main { display: inline-flex; align-items: center; gap: .28rem; }
+  .tree-toggle, .tree-toggle-placeholder {
+    width: 1.7rem;
+    height: 1.7rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--bs-secondary-color);
+  }
+  .tree-toggle:hover { background: color-mix(in srgb, var(--bs-secondary-bg) 82%, transparent); }
+  .tree-toggle[aria-expanded="false"] i { transform: rotate(-90deg); }
+  .tree-toggle i { transition: transform .24s cubic-bezier(.2,.8,.2,1); }
+
+  .tree-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: .42rem .86rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--bs-border-color) 72%, transparent);
+    transition: all .22s ease;
+  }
+  .tree-node:hover .tree-pill {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 18px rgba(15, 23, 42, .09);
+  }
+  .level-0 .tree-pill { background: linear-gradient(90deg, rgba(34, 197, 94, .14), rgba(22, 163, 74, .08)); }
+  .level-1 .tree-pill { background: linear-gradient(90deg, rgba(14, 165, 233, .14), rgba(2, 132, 199, .08)); }
+  .level-2 .tree-pill { background: linear-gradient(90deg, rgba(245, 158, 11, .15), rgba(217, 119, 6, .08)); }
+  .level-3 .tree-pill,
+  .level-4 .tree-pill,
+  .level-5 .tree-pill { background: linear-gradient(90deg, rgba(168, 85, 247, .14), rgba(126, 34, 206, .08)); }
+
+  .tree-children.collapse,
+  .tree-children.collapsing {
+    transition: height .3s cubic-bezier(.2,.7,.2,1), opacity .22s ease, transform .22s ease;
+    transform-origin: top left;
+  }
+  .tree-children.collapse:not(.show) {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  .tree-children.collapse.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  [data-theme="dark"] .tree-node-row:hover {
+    background: color-mix(in srgb, #9ec5ff 18%, transparent);
+  }
+  [data-theme="dark"] .tree-toggle,
+  [data-theme="dark"] .tree-toggle-placeholder {
+    color: #d7e6ff;
+  }
+  [data-theme="dark"] .tree-toggle:hover {
+    background: color-mix(in srgb, #9ec5ff 22%, transparent);
+  }
+  [data-theme="dark"] .tree-children {
+    border-left-color: color-mix(in srgb, #b9d2ff 45%, transparent);
+  }
+  [data-theme="dark"] .tree-pill {
+    color: #f5f9ff;
+    border-color: color-mix(in srgb, #cfe0ff 45%, transparent);
+    box-shadow: 0 8px 18px rgba(4, 10, 25, .45);
+  }
+  [data-theme="dark"] .level-0 .tree-pill { background: linear-gradient(90deg, rgba(74, 222, 128, .34), rgba(34, 197, 94, .24)); }
+  [data-theme="dark"] .level-1 .tree-pill { background: linear-gradient(90deg, rgba(56, 189, 248, .36), rgba(14, 165, 233, .24)); }
+  [data-theme="dark"] .level-2 .tree-pill { background: linear-gradient(90deg, rgba(251, 191, 36, .38), rgba(245, 158, 11, .24)); }
+  [data-theme="dark"] .level-3 .tree-pill,
+  [data-theme="dark"] .level-4 .tree-pill,
+  [data-theme="dark"] .level-5 .tree-pill { background: linear-gradient(90deg, rgba(192, 132, 252, .34), rgba(168, 85, 247, .24)); }
+
+  @media (max-width: 768px) {
+    .tree-node-row { align-items: flex-start; }
+    .category-tabs .nav-link { padding: .45rem .85rem; }
+  }
+</style>
+
+<div class="category-shell">
+  <div class="card category-card">
+    <div class="card-header py-3">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <h4 class="mb-0">分类管理</h4>
+        <ul class="nav nav-pills category-tabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-tree" type="button" role="tab">总览</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-create" type="button" role="tab">新建分类</button>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="tab-tree" role="tabpanel">
+          {% if roots %}
+            <ul class="tree-root">
+              {% for r in roots %}{{ render_node(r) }}{% endfor %}
+            </ul>
+          {% else %}
+            <div class="alert alert-light mb-0">还没有分类，切换到“新建分类”开始创建。</div>
+          {% endif %}
+        </div>
+
+        <div class="tab-pane fade" id="tab-create" role="tabpanel">
+          <form method="post" action="{{ url_for('categories.create') }}">
+            {{ csrf_input() }}
+            <div class="mb-3">
+              <label class="form-label">名称</label>
+              <input class="form-control" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">父分类（可选）</label>
+              <select class="form-select" name="parent_id">
+                <option value="">（顶级）</option>
+                {% for c in all_categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+              </select>
+            </div>
+            <button class="btn btn-dark" type="submit">创建</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

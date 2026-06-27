@@ -1,0 +1,7 @@
+-r requirements.in
+pytest==8.0.0
+pytest-cov==7.1.0
+ruff==0.15.17
+pre-commit==4.6.0
+detect-secrets==1.5.0
+responses==0.26.1

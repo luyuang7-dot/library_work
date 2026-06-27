@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}登录{% endblock %}
+{% block content %}
+<section class="auth-shell auth-shell--login" data-auth-scene data-auth-mode="login">
+  <div class="auth-layout card border-0 overflow-hidden">
+    <div class="auth-hero">
+      <div class="auth-hero__brand">
+        <span class="auth-hero__brand-mark"><i class="bi bi-stars"></i></span>
+        <span class="auth-hero__brand-text">{{ app_name }}</span>
+      </div>
+
+      <div class="auth-hero__story">
+        <span class="auth-hero__eyebrow">欢迎回来</span>
+        <h1 class="auth-hero__title">回到你的课程项目文献工作台，继续完成今天的整理与检索。</h1>
+        <p class="auth-hero__copy">
+          登录后即可继续管理文献记录、执行 PDF 识别、导入 BibTeX，并整理课程项目资料。
+        </p>
+      </div>
+
+      <div class="auth-characters" aria-hidden="true">
+        <div class="auth-character auth-character--orange" data-auth-character="orange">
+          <div class="auth-character__face auth-character__face--orange" data-auth-face>
+            <div class="auth-eye auth-eye--dot">
+              <span class="auth-eye__pupil" data-auth-pupil></span>
+            </div>
+            <div class="auth-eye auth-eye--dot">
+              <span class="auth-eye__pupil" data-auth-pupil></span>
+            </div>
+          </div>
+        </div>
+        <div class="auth-character auth-character--purple" data-auth-character="purple">
+          <div class="auth-character__face auth-character__face--purple" data-auth-face>
+            <div class="auth-eye" data-auth-eye>
+              <span class="auth-eye__white"></span>
+              <span class="auth-eye__pupil" data-auth-pupil></span>
+            </div>
+            <div class="auth-eye" data-auth-eye>
+              <span class="auth-eye__white"></span>
+              <span class="auth-eye__pupil" data-auth-pupil></span>
+            </div>
+          </div>
+        </div>
+        <div class="auth-character auth-character--charcoal" data-auth-character="charcoal">
+          <div class="auth-character__face auth-character__face--charcoal" data-auth-face>
+            <div class="auth-eye auth-eye--compact" data-auth-eye>
+              <span class="auth-eye__white"></span>
+              <span class="auth-eye__pupil" data-auth-pupil></span>
+            </div>
+            <div class="auth-eye auth-eye--compact" data-auth-eye>
+              <span class="auth-eye__white"></span>
+              <span class="auth-eye__pupil" data-auth-pupil></span>
+            </div>
+          </div>
+        </div>
+        <div class="auth-character auth-character--gold" data-auth-character="gold">
+          <div class="auth-character__face auth-character__face--gold" data-auth-face>
+            <div class="auth-eye auth-eye--dot">
+              <span class="auth-eye__pupil" data-auth-pupil></span>
+            </div>
+            <div class="auth-eye auth-eye--dot">
+              <span class="auth-eye__pupil" data-auth-pupil></span>
+            </div>
+          </div>
+          <span class="auth-character__mouth"></span>
+        </div>
+      </div>
+
+      <div class="auth-hero__footer">
+        <span>个人文献库</span>
+        <span>PDF 识别</span>
+        <span>课程项目</span>
+      </div>
+    </div>
+
+    <div class="auth-panel">
+      <div class="auth-panel__inner">
+        <div class="auth-panel__header">
+          <span class="auth-panel__eyebrow">账户登录</span>
+          <h2 class="auth-panel__title">登录你的账号</h2>
+          <p class="auth-panel__copy">请使用已获批准的账号进入你的文献管理空间。</p>
+        </div>
+
+        <form method="post" class="auth-form" data-auth-form>
+          {{ csrf_input() }}
+
+          <div class="auth-form__group">
+            <label class="form-label auth-form__label" for="username">用户名</label>
+            <input
+              class="form-control auth-form__control"
+              id="username"
+              name="username"
+              required
+              autofocus
+              autocomplete="username"
+              placeholder="请输入用户名"
+              data-auth-text-input
+            >
+          </div>
+
+          <div class="auth-form__group">
+            <label class="form-label auth-form__label" for="password">密码</label>
+            <div class="auth-form__password-wrap">
+              <input
+                class="form-control auth-form__control auth-form__control--password"
+                id="password"
+                type="password"
+                name="password"
+                required
+                autocomplete="current-password"
+                placeholder="请输入密码"
+                data-auth-password
+              >
+              <button
+                class="auth-form__toggle"
+                type="button"
+                aria-label="显示或隐藏密码"
+                data-auth-password-toggle
+              >
+                <i class="bi bi-eye" data-auth-eye-icon="show"></i>
+                <i class="bi bi-eye-slash d-none" data-auth-eye-icon="hide"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="auth-form__options">
+            <div class="form-check auth-form__check">
+              <input class="form-check-input" type="checkbox" name="remember" id="remember">
+              <label class="form-check-label" for="remember">30 天内记住我</label>
+            </div>
+            <a class="auth-form__forgot" href="#" data-auth-social>需要帮助？</a>
+          </div>
+
+          <button class="btn btn-primary auth-form__submit" type="submit">登录</button>
+
+          <div class="auth-form__divider"><span>或</span></div>
+
+          <button class="auth-form__social" type="button" data-auth-social>
+            <i class="bi bi-google auth-form__social-icon" aria-hidden="true"></i>
+            使用 Google 继续
+          </button>
+          <p class="auth-form__social-note d-none" data-auth-social-note>
+            当前课程项目版本暂未启用第三方登录，请使用本地账号登录或联系管理员。
+          </p>
+        </form>
+
+        <div class="auth-panel__meta">
+          <span>还没有账号？</span>
+          <a href="{{ url_for('auth.register') }}">立即注册</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/auth_scene.js', v=app_version) }}"></script>
+{% endblock %}

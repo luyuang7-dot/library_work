@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}设置{% endblock %}
+{% block content %}
+<h4 class="mb-4">设置</h4>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header">PDF 解析服务（MinerU）</div>
+      <div class="card-body">
+        <form method="post">
+          {{ csrf_input() }}
+          <input type="hidden" name="action" value="mineru">
+
+          <div class="mb-3">
+            <label class="form-label">服务地址</label>
+            <input type="text" class="form-control" name="mineru_url" id="mineru_url"
+                   value="{{ settings.mineru_url or default_url }}"
+                   placeholder="{{ default_url }}">
+            <div class="form-text">默认使用 <code>{{ default_url }}</code></div>
+          </div>
+
+          <div id="test-result" class="mb-3"></div>
+
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary" type="button" id="btn-test">测试连接</button>
+            <button class="btn btn-primary" type="submit">保存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card h-100">
+      <div class="card-header">AI 助手</div>
+      <div class="card-body">
+        <form method="post">
+          {{ csrf_input() }}
+          <input type="hidden" name="action" value="save_ai_agent">
+
+          <div class="mb-3">
+            <label class="form-label">显示名称</label>
+            <input type="text" class="form-control" name="agent_name"
+                   value="{{ agent.agent_name or '小助' }}" maxlength="64">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">接入 URL</label>
+            <input type="url" class="form-control" name="ai_api_url"
+                   value="{{ agent.api_url or '' }}"
+                   placeholder="https://api.deepseek.com/v1/chat/completions">
+            <div class="form-text">需要指向兼容 <code>/v1/chat/completions</code> 的接口。</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">模型名称</label>
+            <input type="text" class="form-control" name="ai_model"
+                   value="{{ agent.model or '' }}" maxlength="64"
+                   placeholder="deepseek-chat">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">语气</label>
+            <select class="form-select" name="tone">
+              {% for key, label in tone_options.items() %}
+              <option value="{{ key }}" {% if (agent.tone or 'gentle') == key %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">身份</label>
+            <select class="form-select" name="role">
+              {% for key, label in role_options.items() %}
+              <option value="{{ key }}" {% if (agent.role or 'companion') == key %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">性格</label>
+            <select class="form-select" name="personality">
+              {% for key, label in personality_options.items() %}
+              <option value="{{ key }}" {% if (agent.personality or 'thoughtful') == key %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">用户偏好</label>
+            <textarea class="form-control" name="user_preference" rows="3" maxlength="500"
+                      placeholder="例如：回答尽量简洁，优先提醒任务状态和风险点。">{{ agent.user_preference or '' }}</textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">自动日志规则</label>
+            <div class="form-control" aria-readonly="true">
+              每天 {{ daily_rollup_time }} 生成当日日志；次日 {{ daily_prune_time }} 清理前一日活动数据。
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">API 密钥</label>
+            <input type="password" class="form-control" name="ai_api_key" value=""
+                   placeholder="{% if agent.api_key %}已配置（留空表示不修改）{% else %}留空表示不修改{% endif %}">
+          </div>
+
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="agent_enabled" name="agent_enabled"
+                   {% if agent.enabled %}checked{% endif %}>
+            <label class="form-check-label" for="agent_enabled">启用 AI 助手</label>
+          </div>
+
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="clear_ai_api_key" name="clear_ai_api_key">
+            <label class="form-check-label" for="clear_ai_api_key">清空 API Key</label>
+          </div>
+
+          <button class="btn btn-primary" type="submit">保存 AI 助手设置</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">账户安全</div>
+      <div class="card-body">
+        <form method="post">
+          {{ csrf_input() }}
+          <input type="hidden" name="action" value="change_password">
+
+          <div class="mb-3">
+            <label class="form-label">当前密码</label>
+            <input type="password" class="form-control" name="current_password"
+                   autocomplete="current-password" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">新密码</label>
+            <input type="password" class="form-control" name="new_password"
+                   autocomplete="new-password" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">确认新密码</label>
+            <input type="password" class="form-control" name="confirm_password"
+                   autocomplete="new-password" required>
+          </div>
+
+          <div class="form-text mb-3">
+            密码至少 8 位，并且至少包含以下两类中的两类：字母、数字、符号。
+          </div>
+
+          <button class="btn btn-outline-primary" type="submit">修改密码</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+document.getElementById('btn-test').addEventListener('click', async () => {
+  const url = document.getElementById('mineru_url').value.trim();
+  const out = document.getElementById('test-result');
+  out.innerHTML = '<div class="alert alert-info py-2 mb-0">正在测试...</div>';
+  const fd = new FormData();
+  fd.append('mineru_url', url);
+  try {
+    const r = await fetch('{{ url_for("settings.test_mineru") }}', { method: 'POST', body: fd });
+    const j = await r.json();
+    if (j.ok) {
+      out.innerHTML = `<div class="alert alert-success py-2 mb-0">连接成功 · 版本 ${j.version || '?'} · 状态 ${j.status}</div>`;
+    } else {
+      out.innerHTML = `<div class="alert alert-danger py-2 mb-0">连接失败: ${j.error}</div>`;
+    }
+  } catch (e) {
+    out.innerHTML = `<div class="alert alert-danger py-2 mb-0">请求失败: ${e}</div>`;
+  }
+});
+</script>
+{% endblock %}

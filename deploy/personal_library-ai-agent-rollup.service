@@ -1,0 +1,13 @@
+[Unit]
+Description=Personal Library AI Agent Rollup
+After=network.target mysql.service
+
+[Service]
+Type=oneshot
+User=library
+Group=www-data
+WorkingDirectory=/opt/personal_library/current
+EnvironmentFile=/opt/personal_library/current/.env
+Environment=FLASK_ENV=prod
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/personal_library/current/.venv/bin/python /opt/personal_library/current/scripts/ai_agent_rollup.py

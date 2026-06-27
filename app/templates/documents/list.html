@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}文献库{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <aside class="col-md-3">
+    <div class="card shadow-sm">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-folder me-1"></i> 分类</span>
+        <a href="{{ url_for('categories.list_categories') }}" class="btn btn-sm btn-outline-primary">管理</a>
+      </div>
+      <div class="list-group list-group-flush">
+        <a class="list-group-item list-group-item-action {% if not active_category %}active{% endif %}" href="{{ url_for('documents.list_documents') }}">
+          全部文献
+        </a>
+        {% for category in categories %}
+        <a
+          class="list-group-item list-group-item-action {% if active_category == category.id %}active{% endif %}"
+          href="{{ url_for('documents.list_documents', category=category.id) }}"
+          style="padding-left: {{ 1.0 + ((category.depth or 0) * 1.1) }}rem;"
+        >
+          {{ category.name }}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </aside>
+
+  <main class="col-md-9">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <div>
+        <h4 class="mb-0">文献库 <span class="badge bg-secondary">{{ pagination.total }}</span></h4>
+        {% if active_category_name %}
+        <div class="text-muted small mt-1">当前分类：{{ active_category_name }}</div>
+        {% endif %}
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-dark" href="{{ url_for('documents.search') }}">检索</a>
+        <a class="btn btn-primary" href="{{ url_for('documents.new') }}">新建文献</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('bibtex.import_form') }}">导入 BibTeX</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('batch_bibtex.batch_page') }}">批量 PDF</a>
+      </div>
+    </div>
+
+    {% if pagination.total %}
+    <div class="small text-muted mb-3">
+      当前显示第 {{ pagination.first }} - {{ pagination.last }} 篇，共 {{ pagination.total }} 篇文献。
+    </div>
+    {% endif %}
+
+    {% if documents %}
+    <form id="bulk-delete-form" method="post" action="{{ url_for('documents.bulk_delete') }}">
+      {{ csrf_input() }}
+      <input type="hidden" name="return_page" value="{{ pagination.page }}">
+      <input type="hidden" name="return_category" value="{{ active_category or '' }}">
+    </form>
+    <form id="bulk-category-form" method="post" action="{{ url_for('documents.bulk_category') }}">
+      {{ csrf_input() }}
+      <input type="hidden" name="return_page" value="{{ pagination.page }}">
+      <input type="hidden" name="return_category" value="{{ active_category or '' }}">
+      <input type="hidden" name="category_id" id="bulk-category-id" value="">
+    </form>
+
+    <div class="d-flex align-items-center gap-3 mb-2 flex-wrap">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="select-page-all">
+        <label class="form-check-label" for="select-page-all">选择本页</label>
+      </div>
+      <select class="form-select form-select-sm" id="bulk-category-select" style="max-width: 240px;">
+        <option value="">移动所选文献到...</option>
+        <option value="__none__">未分类</option>
+        {% for category in categories %}
+        <option value="{{ category.id }}">{{ category.name }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-outline-primary btn-sm" id="bulk-category-btn" type="button" disabled>更新分类</button>
+      <button class="btn btn-outline-danger btn-sm" id="bulk-delete-btn" type="button" disabled>删除所选</button>
+      <span class="small text-muted" id="bulk-delete-hint">请先选择至少一篇文献。</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 42px;"><input type="checkbox" id="select-all-header"></th>
+            <th style="width: 38%;">标题</th>
+            <th>作者</th>
+            <th>来源</th>
+            <th>年份</th>
+            <th>状态</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for document in documents %}
+          <tr>
+            <td><input type="checkbox" class="doc-select" value="{{ document.id }}"></td>
+            <td>
+              <a class="text-decoration-none" href="{{ url_for('documents.detail', doc_id=document.id) }}"><strong>{{ document.title }}</strong></a>
+              {% if document.rating %}
+              <span class="text-warning">{% for _ in range(document.rating) %}*{% endfor %}</span>
+              {% endif %}
+            </td>
+            <td>{{ document.authors_display or "-" }}</td>
+            <td>{{ document.source.name if document.source else "-" }}</td>
+            <td>{{ document.publication_year or "-" }}</td>
+            <td>
+              {% if document.reading_status == 'read' %}<span class="badge bg-success">已读</span>
+              {% elif document.reading_status == 'reading' %}<span class="badge bg-warning text-dark">在读</span>
+              {% else %}<span class="badge bg-secondary">未读</span>{% endif %}
+            </td>
+            <td class="text-end text-nowrap">
+              <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#doc-extra-{{ document.id }}">详情</button>
+              <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('documents.edit', doc_id=document.id) }}">编辑</a>
+              <form class="d-inline" method="post" action="{{ url_for('documents.delete', doc_id=document.id) }}" onsubmit="return confirm('确认删除这篇文献吗？');">
+                {{ csrf_input() }}
+                <button class="btn btn-sm btn-outline-danger" type="submit">删除</button>
+              </form>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="7" class="p-0 border-top-0">
+              <div class="collapse bg-body-tertiary p-3" id="doc-extra-{{ document.id }}">
+                <div class="border rounded p-3">
+                  <div class="row g-3">
+                    <div class="col-lg-7">
+                      <div class="small text-muted mb-1">摘要</div>
+                      <div style="white-space: pre-wrap;">{{ document.abstract or '暂无摘要。' }}</div>
+                    </div>
+                    <div class="col-lg-5">
+                      <dl class="row small mb-2">
+                        <dt class="col-4">DOI</dt>
+                        <dd class="col-8 mb-1">{% if document.doi %}<a target="_blank" href="https://doi.org/{{ document.doi }}">{{ document.doi }}</a>{% else %}-{% endif %}</dd>
+                        <dt class="col-4">分类</dt>
+                        <dd class="col-8 mb-1">{{ document.category.name if document.category else '-' }}</dd>
+                        <dt class="col-4">卷/期/页</dt>
+                        <dd class="col-8 mb-1">{{ document.volume or '-' }} / {{ document.issue or '-' }} / {{ document.pages or '-' }}</dd>
+                      </dl>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <nav class="mt-3">
+      <ul class="pagination justify-content-center flex-wrap gap-1">
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+          <a class="page-link" href="{% if pagination.has_prev %}{{ page_url(pagination.prev_num) }}{% else %}#{% endif %}">上一页</a>
+        </li>
+        {% for page_number in pagination.iter_pages(left_edge=1, left_current=1, right_current=2, right_edge=1) %}
+          {% if page_number %}
+          <li class="page-item {% if page_number == pagination.page %}active{% endif %}"><a class="page-link" href="{{ page_url(page_number) }}">{{ page_number }}</a></li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">...</span></li>
+          {% endif %}
+        {% endfor %}
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+          <a class="page-link" href="{% if pagination.has_next %}{{ page_url(pagination.next_num) }}{% else %}#{% endif %}">下一页</a>
+        </li>
+      </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="alert alert-light text-center py-5 border">
+      <p class="mb-2">当前还没有文献。</p>
+      <a class="btn btn-primary" href="{{ url_for('documents.new') }}">新建第一篇文献</a>
+    </div>
+    {% endif %}
+  </main>
+</div>
+
+<script>
+(function () {
+  const rows = Array.from(document.querySelectorAll(".doc-select"));
+  const header = document.getElementById("select-all-header");
+  const pageAll = document.getElementById("select-page-all");
+  const bulkDeleteBtn = document.getElementById("bulk-delete-btn");
+  const bulkCategoryBtn = document.getElementById("bulk-category-btn");
+  const bulkCategorySelect = document.getElementById("bulk-category-select");
+  const bulkCategoryId = document.getElementById("bulk-category-id");
+  const hint = document.getElementById("bulk-delete-hint");
+  const deleteForm = document.getElementById("bulk-delete-form");
+  const categoryForm = document.getElementById("bulk-category-form");
+  if (!rows.length || !header || !pageAll || !bulkDeleteBtn || !bulkCategoryBtn || !bulkCategorySelect || !bulkCategoryId || !hint || !deleteForm || !categoryForm) return;
+
+  function checkedRows() {
+    return rows.filter((element) => element.checked);
+  }
+
+  function syncDocInputs(form, checked) {
+    form.querySelectorAll("input[name='doc_ids']").forEach((element) => element.remove());
+    checked.forEach((element) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "doc_ids";
+      input.value = element.value;
+      form.appendChild(input);
+    });
+  }
+
+  function sync() {
+    const checked = checkedRows().length;
+    const hasSelection = checked > 0;
+    bulkDeleteBtn.disabled = !hasSelection;
+    bulkCategoryBtn.disabled = !hasSelection || !bulkCategorySelect.value;
+    hint.textContent = hasSelection ? `已选择 ${checked} / ${rows.length} 篇` : "请先选择至少一篇文献。";
+    header.checked = checked === rows.length && rows.length > 0;
+    pageAll.checked = checked === rows.length && rows.length > 0;
+  }
+
+  function setAll(checked) {
+    rows.forEach((element) => {
+      element.checked = checked;
+    });
+    sync();
+  }
+
+  header.addEventListener("change", () => setAll(header.checked));
+  pageAll.addEventListener("change", () => setAll(pageAll.checked));
+  rows.forEach((element) => element.addEventListener("change", sync));
+  bulkCategorySelect.addEventListener("change", sync);
+
+  bulkCategoryBtn.addEventListener("click", () => {
+    const checked = checkedRows();
+    if (!checked.length || !bulkCategorySelect.value) return;
+    syncDocInputs(categoryForm, checked);
+    bulkCategoryId.value = bulkCategorySelect.value;
+    categoryForm.submit();
+  });
+
+  bulkDeleteBtn.addEventListener("click", () => {
+    const checked = checkedRows();
+    if (!checked.length) return;
+    syncDocInputs(deleteForm, checked);
+    if (confirm("确认删除选中的文献吗？")) {
+      deleteForm.submit();
+    }
+  });
+
+  sync();
+})();
+</script>
+{% endblock %}

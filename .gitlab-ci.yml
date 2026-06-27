@@ -1,0 +1,17 @@
+stages:
+  - quality
+
+quality:
+  stage: quality
+  image: python:3.12
+  variables:
+    FLASK_ENV: "test"
+    PYTHONUTF8: "1"
+    PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  before_script:
+    - python -m pip install --upgrade pip
+    - pip install -r requirements-dev.txt
+  script:
+    - ruff check .
+    - python scripts/run_quality_checks.py --skip-ruff --skip-pre-commit
+    - python scripts/verify_hardening_status.py

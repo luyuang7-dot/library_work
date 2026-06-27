@@ -1,0 +1,514 @@
+{% extends "base.html" %}
+{% block title %}{% if doc %}编辑文献{% else %}新增文献{% endif %}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <h3 class="mb-0">{% if doc %}编辑文献{% else %}新增文献{% endif %}</h3>
+  <button type="button" class="btn btn-outline-primary" id="btn-recognize-toggle">
+    <i class="bi bi-magic"></i> 识别 PDF
+  </button>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-12" id="edit-form-col">
+    <input type="file" id="recognize-file-hidden" accept="application/pdf" class="d-none">
+
+    <form method="post" enctype="multipart/form-data" class="row g-3">
+      {{ csrf_input() }}
+
+      <div class="col-12">
+        <label class="form-label">标题 *</label>
+        <input class="form-control" name="title" required value="{{ doc.title if doc else '' }}">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">文献类型</label>
+        {% set doc_type = doc.document_type if doc else 'journal_article' %}
+        <select name="document_type" class="form-select">
+          <option value="journal_article" {% if doc_type == 'journal_article' %}selected{% endif %}>期刊论文</option>
+          <option value="conference_paper" {% if doc_type == 'conference_paper' %}selected{% endif %}>会议论文</option>
+          <option value="book" {% if doc_type == 'book' %}selected{% endif %}>图书</option>
+          <option value="thesis" {% if doc_type == 'thesis' %}selected{% endif %}>学位论文</option>
+          <option value="report" {% if doc_type == 'report' %}selected{% endif %}>报告</option>
+          <option value="other" {% if doc_type == 'other' %}selected{% endif %}>其他</option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">分类</label>
+        <select name="category_id" class="form-select">
+          <option value="">未分类</option>
+          {% for category in categories %}
+          <option value="{{ category.id }}" {% if doc and doc.category_id == category.id %}selected{% endif %}>{{ category.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">出版年份</label>
+        <input class="form-control" type="number" name="publication_year" value="{{ doc.publication_year if doc and doc.publication_year else '' }}">
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">阅读状态</label>
+        {% set reading_status = doc.reading_status if doc else 'unread' %}
+        <select name="reading_status" class="form-select">
+          <option value="unread" {% if reading_status == 'unread' %}selected{% endif %}>未读</option>
+          <option value="reading" {% if reading_status == 'reading' %}selected{% endif %}>在读</option>
+          <option value="read" {% if reading_status == 'read' %}selected{% endif %}>已读</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">评分</label>
+        {% set rating = doc.rating if doc and doc.rating else 0 %}
+        <select name="rating" class="form-select">
+          <option value="" {% if rating == 0 %}selected{% endif %}>-</option>
+          {% for score in range(1, 6) %}
+          <option value="{{ score }}" {% if rating == score %}selected{% endif %}>{{ score }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">来源名称</label>
+        <input class="form-control" name="source_name" list="dl-sources" value="{{ doc.source.name if doc and doc.source else '' }}">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">来源类型</label>
+        {% set source_type = doc.source.type if doc and doc.source else 'journal' %}
+        <select name="source_type" class="form-select">
+          <option value="journal" {% if source_type == 'journal' %}selected{% endif %}>期刊</option>
+          <option value="conference" {% if source_type == 'conference' %}selected{% endif %}>会议</option>
+          <option value="book_series" {% if source_type == 'book_series' %}selected{% endif %}>丛书</option>
+          <option value="other" {% if source_type == 'other' %}selected{% endif %}>其他</option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">出版社</label>
+        <input class="form-control" name="publisher_name" list="dl-publishers" value="{{ doc.source.publisher.name if doc and doc.source and doc.source.publisher else '' }}">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">卷</label>
+        <input class="form-control" name="volume" value="{{ doc.volume if doc else '' }}">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">期</label>
+        <input class="form-control" name="issue" value="{{ doc.issue if doc else '' }}">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">页码</label>
+        <input class="form-control" name="pages" value="{{ doc.pages if doc else '' }}">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">DOI</label>
+        <input class="form-control" name="doi" value="{{ doc.doi if doc else '' }}">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">条码</label>
+        <input class="form-control" name="barcode" value="{{ doc.barcode if doc else '' }}">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">册号</label>
+        <input class="form-control" name="copy_no" value="{{ doc.copy_no if doc else '' }}">
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">作者</label>
+        <textarea class="form-control font-monospace" id="authors-raw" name="authors_raw" rows="4" placeholder="张三 | 复旦大学&#10;李四#2 | 北京大学; 清华大学">{{ authors_text }}</textarea>
+        <div class="form-text">每行一位作者，格式：`姓名[#编号] | 单位1; 单位2`。</div>
+        <div id="author-conflicts" class="mt-2"></div>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">关键词</label>
+        <input class="form-control" name="keywords_raw" value="{{ doc.keywords_display if doc else '' }}" placeholder="数据库, 文献管理, 检索">
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">标签</label>
+        <input class="form-control" name="tags_raw" value="{{ doc.tags_display if doc else '' }}" placeholder="课程项目, 已精读">
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">摘要</label>
+        <textarea class="form-control" name="abstract" rows="5">{{ doc.abstract if doc else '' }}</textarea>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">个人笔记</label>
+        <textarea class="form-control" name="notes" rows="4">{{ doc.notes if doc else '' }}</textarea>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">附件（支持 PDF、DOC、DOCX、TXT、PS、EPUB）</label>
+        <input class="form-control" type="file" name="attachments" multiple>
+        {% if doc and doc.files %}
+        <div class="form-text">当前已有 {{ doc.files|length }} 个附件，可在详情页删除。</div>
+        {% endif %}
+      </div>
+
+      <div class="col-12 d-flex gap-2 flex-wrap">
+        <button class="btn btn-primary" type="submit">保存</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('documents.list_documents') }}">取消</a>
+      </div>
+    </form>
+
+    <datalist id="dl-sources"></datalist>
+    <datalist id="dl-publishers"></datalist>
+  </div>
+
+  <div class="col-lg-4 d-none" id="recognize-pane">
+    <div class="position-sticky" style="top: 76px;">
+      <div class="card">
+        <div class="card-body">
+          <div id="rp-upload">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <strong><i class="bi bi-magic"></i> PDF 识别</strong>
+              <button type="button" class="btn-close" id="rp-close-upload" aria-label="关闭"></button>
+            </div>
+            <div class="text-center py-4 border rounded bg-body-tertiary">
+              <i class="bi bi-file-earmark-pdf fs-1 text-muted d-block mb-2"></i>
+              <p class="small text-muted mb-3">选择一个 PDF，系统会调用 MinerU 解析并提取建议元数据。</p>
+              <button type="button" class="btn btn-primary btn-sm" id="rp-btn-pick">选择 PDF</button>
+            </div>
+          </div>
+
+          <div id="rp-loading" class="d-none">
+            <div class="d-flex align-items-center alert alert-info mb-0">
+              <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+              <div class="small">正在识别 PDF，请稍候。</div>
+            </div>
+          </div>
+
+          <div id="rp-result" class="d-none">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <strong class="text-truncate" id="rp-filename"></strong>
+              <button type="button" class="btn-close" id="rp-close-result" aria-label="关闭"></button>
+            </div>
+            <div class="small text-muted mb-2" id="rp-charcount"></div>
+            <div class="d-flex gap-2 flex-wrap mb-3">
+              <button type="button" class="btn btn-sm btn-success" id="rp-btn-fill">
+                <i class="bi bi-magic"></i> 填入表单
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-primary" id="rp-btn-copy">复制 Markdown</button>
+              <button type="button" class="btn btn-sm btn-outline-success" id="rp-btn-download">下载 Markdown</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="rp-btn-new-pdf">重新选择</button>
+            </div>
+            <pre id="rp-markdown" class="small bg-body-tertiary border rounded p-2 mb-0" style="max-height: calc(100vh - 320px); overflow: auto; white-space: pre-wrap;"></pre>
+          </div>
+
+          <div id="rp-error" class="d-none">
+            <div class="alert alert-danger small mb-2" id="rp-error-body"></div>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="rp-btn-retry">重试</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const sourcesUrl = '{{ url_for("library.api_sources") }}';
+  const publishersUrl = '{{ url_for("library.api_publishers") }}';
+  const authorLookupUrl = '{{ url_for("documents.author_lookup") }}';
+  const recognizeUrl = '{{ url_for("documents.recognize_pdf") }}';
+
+  function fillDatalist(url, elementId) {
+    fetch(url)
+      .then((response) => response.json())
+      .then((items) => {
+        const list = document.getElementById(elementId);
+        if (!list || !Array.isArray(items)) return;
+        items.forEach((item) => {
+          const option = document.createElement("option");
+          option.value = item;
+          list.appendChild(option);
+        });
+      })
+      .catch(() => {});
+  }
+
+  fillDatalist(sourcesUrl, "dl-sources");
+  fillDatalist(publishersUrl, "dl-publishers");
+
+  (function setupAuthorConflicts() {
+    const textarea = document.getElementById("authors-raw");
+    const panel = document.getElementById("author-conflicts");
+    if (!textarea || !panel) return;
+
+    const nameCodeRe = /^(.+?)(?:#(\d+|new))?\s*$/;
+    const cache = new Map();
+    let timer = null;
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function parseLines() {
+      return textarea.value
+        .split("\n")
+        .map((raw, index) => {
+          const trimmed = raw.trim();
+          if (!trimmed) return null;
+          const parts = trimmed.split("|").map((part) => part.trim());
+          const match = parts[0].match(nameCodeRe);
+          if (!match) return null;
+          return { index, name: match[1].trim(), code: match[2] || null };
+        })
+        .filter(Boolean);
+    }
+
+    function setLineCode(lineIndex, code) {
+      const lines = textarea.value.split("\n");
+      if (lineIndex >= lines.length) return;
+      const parts = lines[lineIndex].split("|");
+      const match = parts[0].trim().match(nameCodeRe);
+      if (!match) return;
+      parts[0] = `${match[1].trim()}#${code}`;
+      lines[lineIndex] = parts.join(" | ");
+      textarea.value = lines.join("\n");
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+      schedule();
+    }
+
+    async function lookup(name) {
+      if (cache.has(name)) return cache.get(name);
+      try {
+        const response = await fetch(`${authorLookupUrl}?name=${encodeURIComponent(name)}`);
+        const payload = await response.json();
+        cache.set(name, payload);
+        return payload;
+      } catch (error) {
+        return { authors: [], next_code: 1 };
+      }
+    }
+
+    async function refresh() {
+      const unresolved = new Map();
+      parseLines().forEach((item) => {
+        if (item.code !== null) return;
+        if (!unresolved.has(item.name)) unresolved.set(item.name, item.index);
+      });
+
+      if (!unresolved.size) {
+        panel.innerHTML = "";
+        return;
+      }
+
+      const cards = [];
+      for (const [name, lineIndex] of unresolved.entries()) {
+        const result = await lookup(name);
+        if (!result.authors || result.authors.length === 0) continue;
+        const body = result.authors.map((author) => {
+          const affiliations = author.affiliations.length ? author.affiliations.join("; ") : "无单位信息";
+          const sample = author.sample_doc
+            ? `${escapeHtml(author.sample_doc.title)}${author.sample_doc.year ? ` · ${author.sample_doc.year}` : ""}`
+            : "库中暂无该作者文献";
+          return `
+            <div class="d-flex justify-content-between align-items-start gap-2 py-1">
+              <div class="small">
+                <div><strong>#${author.code}</strong> · ${escapeHtml(affiliations)}</div>
+                <div class="text-muted">${sample}</div>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-primary" data-line="${lineIndex}" data-code="${author.code}">使用 #${author.code}</button>
+            </div>
+          `;
+        }).join("");
+
+        cards.push(`
+          <div class="card border-warning mb-2">
+            <div class="card-header py-2 small">
+              作者 <strong>${escapeHtml(name)}</strong> 已存在同名记录，请确认是否复用编号。
+            </div>
+            <div class="card-body py-2">
+              ${body}
+              <hr class="my-2">
+              <button type="button" class="btn btn-sm btn-outline-success" data-line="${lineIndex}" data-code="new">创建新编号 #${result.next_code}</button>
+            </div>
+          </div>
+        `);
+      }
+
+      panel.innerHTML = cards.join("");
+      panel.querySelectorAll("button[data-line]").forEach((button) => {
+        button.addEventListener("click", () => {
+          setLineCode(Number(button.dataset.line), button.dataset.code);
+        });
+      });
+    }
+
+    function schedule() {
+      clearTimeout(timer);
+      timer = setTimeout(refresh, 350);
+    }
+
+    textarea.addEventListener("input", schedule);
+    textarea.addEventListener("blur", schedule);
+    schedule();
+  })();
+
+  (function setupPdfRecognition() {
+    const toggleButton = document.getElementById("btn-recognize-toggle");
+    if (!toggleButton) return;
+
+    const pane = document.getElementById("recognize-pane");
+    const formCol = document.getElementById("edit-form-col");
+    const fileInput = document.getElementById("recognize-file-hidden");
+    const uploadState = document.getElementById("rp-upload");
+    const loadingState = document.getElementById("rp-loading");
+    const resultState = document.getElementById("rp-result");
+    const errorState = document.getElementById("rp-error");
+    const filenameEl = document.getElementById("rp-filename");
+    const charcountEl = document.getElementById("rp-charcount");
+    const markdownEl = document.getElementById("rp-markdown");
+    const errorBodyEl = document.getElementById("rp-error-body");
+
+    let lastMarkdown = "";
+    let lastSuggested = null;
+    let lastFilename = "";
+
+    function setPaneVisible(visible) {
+      pane.classList.toggle("d-none", !visible);
+      formCol.classList.toggle("col-lg-12", !visible);
+      formCol.classList.toggle("col-lg-8", visible);
+    }
+
+    function setState(stateName) {
+      uploadState.classList.add("d-none");
+      loadingState.classList.add("d-none");
+      resultState.classList.add("d-none");
+      errorState.classList.add("d-none");
+      ({ upload: uploadState, loading: loadingState, result: resultState, error: errorState })[stateName].classList.remove("d-none");
+    }
+
+    function authorsToText(authors, affiliations) {
+      if (!Array.isArray(authors) || authors.length === 0) return "";
+      return authors.map((name, index) => {
+        const affiliation = Array.isArray(affiliations) ? affiliations[index] : "";
+        return affiliation ? `${name} | ${affiliation}` : name;
+      }).join("\n");
+    }
+
+    function showResult() {
+      filenameEl.textContent = lastFilename;
+      charcountEl.textContent = `Markdown 长度：${lastMarkdown.length.toLocaleString()} 个字符`;
+      markdownEl.textContent = lastMarkdown;
+      setState("result");
+    }
+
+    async function recognize(file) {
+      setState("loading");
+      const formData = new FormData();
+      formData.append("pdf", file);
+
+      try {
+        const response = await fetch(recognizeUrl, { method: "POST", body: formData });
+        const payload = await response.json();
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.error || `HTTP ${response.status}`);
+        }
+        lastMarkdown = payload.markdown || "";
+        lastSuggested = payload.suggested_fields || null;
+        lastFilename = payload.filename || file.name;
+        showResult();
+      } catch (error) {
+        errorBodyEl.textContent = `识别失败：${error}`;
+        setState("error");
+      }
+    }
+
+    function fillSuggestedFields() {
+      if (!lastSuggested) return;
+      const mappings = [
+        ["input[name='title']", lastSuggested.title || ""],
+        ["input[name='publication_year']", lastSuggested.year ? String(lastSuggested.year) : ""],
+        ["input[name='doi']", lastSuggested.doi || ""],
+        ["input[name='source_name']", lastSuggested.source || ""],
+        ["input[name='keywords_raw']", Array.isArray(lastSuggested.keywords) ? lastSuggested.keywords.join(", ") : ""],
+        ["textarea[name='abstract']", lastSuggested.abstract || ""],
+      ];
+
+      const updates = [];
+      mappings.forEach(([selector, value]) => {
+        if (!value) return;
+        const element = document.querySelector(selector);
+        if (!element) return;
+        updates.push({ element, oldValue: element.value, newValue: value });
+      });
+
+      const authorsElement = document.getElementById("authors-raw");
+      const authorText = authorsToText(lastSuggested.authors, lastSuggested.affiliations);
+      if (authorsElement && authorText) {
+        updates.push({ element: authorsElement, oldValue: authorsElement.value, newValue: authorText, notify: true });
+      }
+
+      if (!updates.length) return;
+      const hasConflict = updates.some((item) => String(item.oldValue || "").trim());
+      if (hasConflict && !confirm("部分表单字段已有内容，确认用 PDF 识别结果覆盖吗？")) {
+        return;
+      }
+
+      updates.forEach((item) => {
+        item.element.value = item.newValue;
+        if (item.notify) {
+          item.element.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      });
+    }
+
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      recognize(file);
+      fileInput.value = "";
+    });
+
+    document.getElementById("rp-btn-pick").addEventListener("click", () => fileInput.click());
+    document.getElementById("rp-btn-new-pdf").addEventListener("click", () => fileInput.click());
+    document.getElementById("rp-btn-retry").addEventListener("click", () => fileInput.click());
+    document.getElementById("rp-close-upload").addEventListener("click", () => setPaneVisible(false));
+    document.getElementById("rp-close-result").addEventListener("click", () => setPaneVisible(false));
+    document.getElementById("rp-btn-fill").addEventListener("click", fillSuggestedFields);
+
+    document.getElementById("rp-btn-copy").addEventListener("click", async () => {
+      if (!lastMarkdown) return;
+      await navigator.clipboard.writeText(lastMarkdown);
+    });
+
+    document.getElementById("rp-btn-download").addEventListener("click", () => {
+      if (!lastMarkdown) return;
+      const blob = new Blob([lastMarkdown], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${(lastFilename || "recognized").replace(/\.pdf$/i, "")}.md`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    toggleButton.addEventListener("click", () => {
+      const visible = pane.classList.contains("d-none");
+      setPaneVisible(visible);
+      if (visible) {
+        setState(lastMarkdown ? "result" : "upload");
+      }
+    });
+  })();
+})();
+</script>
+{% endblock %}

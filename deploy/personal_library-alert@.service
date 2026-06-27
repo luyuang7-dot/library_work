@@ -1,0 +1,12 @@
+[Unit]
+Description=Personal Library runtime alert for %i
+After=network.target
+
+[Service]
+Type=oneshot
+User=library
+Group=www-data
+WorkingDirectory=/opt/personal_library/current
+EnvironmentFile=/opt/personal_library/.env
+Environment=FLASK_ENV=prod
+ExecStart=/bin/bash /opt/personal_library/current/scripts/emit_runtime_alert.sh %i

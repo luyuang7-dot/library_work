@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}批量 PDF 识别{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <h3 class="mb-0">批量 PDF 识别与导入</h3>
+  <a class="btn btn-outline-secondary" href="{{ url_for('documents.list_documents') }}">返回文献库</a>
+</div>
+
+<div id="mineru-banner" class="alert alert-warning d-none" role="alert">
+  <span id="mineru-banner-msg"></span>
+  <a href="{{ url_for('settings.index') }}" class="alert-link">打开设置</a>
+</div>
+
+<div
+  id="batch-app"
+  data-mineru-url="{{ mineru_url }}"
+  data-categories='{{ categories | tojson | safe }}'
+  data-next-doc-id="{{ next_doc_id }}"
+  data-supported-types='{{ supported_types | tojson | safe }}'
+  data-recognize-url="{{ url_for('batch_bibtex.recognize') }}"
+  data-import-url="{{ url_for('batch_bibtex.import_one') }}"
+  data-health-url="{{ url_for('batch_bibtex.batch_health') }}"
+>
+  <section id="state-empty" class="card">
+    <div class="card-body text-center py-5">
+      <p class="mb-3">
+        选择多个 PDF 文件后，系统会先逐个识别，再让你检查并导入提取出的元数据。
+      </p>
+      <input type="file" id="pdf-input" accept="application/pdf,.pdf" multiple class="d-none">
+      <button type="button" id="pick-files-btn" class="btn btn-primary">选择 PDF 文件</button>
+      <div class="mt-3 d-inline-block text-start">
+        <label class="form-label small mb-1">本批次默认分类</label>
+        <select id="default-category" class="form-select form-select-sm" style="min-width: 220px;">
+          <option value="">不设置默认分类</option>
+          {% for category in categories %}
+          <option value="{{ category.id }}">{{ category.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <p class="small text-muted mt-3 mb-0">
+        批次越小越容易复核，建议单次处理 20 篇 PDF 及以下。
+      </p>
+    </div>
+  </section>
+
+  <section id="state-working" class="d-none">
+    <div class="row g-3">
+      <aside class="col-md-3">
+        <div class="card">
+          <div class="card-header">文件：<span id="file-count">0</span></div>
+          <ul id="file-list" class="list-group list-group-flush"></ul>
+          <div class="card-body d-grid gap-2">
+            <button type="button" id="retry-failed-btn" class="btn btn-outline-secondary btn-sm" disabled>重试失败项</button>
+            <button type="button" id="submit-all-btn" class="btn btn-success btn-sm" disabled>导入当前批次</button>
+            <a href="{{ url_for('batch_bibtex.batch_page') }}" class="btn btn-link btn-sm">重新开始</a>
+          </div>
+        </div>
+      </aside>
+
+      <main class="col-md-9">
+        <div id="empty-pane" class="alert alert-light text-center py-5">
+          请从左侧选择文件，查看识别结果和元数据表单。
+        </div>
+        <div id="split-pane" class="d-none">
+          <div class="row g-3">
+            <div class="col-lg-6">
+              <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span id="md-filename" class="small text-muted"></span>
+                  <span id="md-status" class="badge bg-secondary">-</span>
+                </div>
+                <div class="card-body" style="max-height: 70vh; overflow-y: auto;">
+                  <div id="md-render"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-6">
+              <div class="card h-100">
+                <div class="card-header">文献元数据</div>
+                <div class="card-body" style="max-height: 70vh; overflow-y: auto;">
+                  <form id="batch-form" class="row g-3">
+                    <div class="col-12">
+                      <label class="form-label">标题 *</label>
+                      <input id="form-title" class="form-control" name="title" required>
+                    </div>
+
+                    <div class="col-md-4">
+                      <label class="form-label">文献类型</label>
+                      <select id="form-document-type" name="document_type" class="form-select">
+                        <option value="journal_article">期刊论文</option>
+                        <option value="conference_paper">会议论文</option>
+                        <option value="book">图书</option>
+                        <option value="thesis">学位论文</option>
+                        <option value="report">报告</option>
+                        <option value="other">其他</option>
+                      </select>
+                    </div>
+
+                    <div class="col-md-4">
+                      <label class="form-label">来源类型</label>
+                      <select id="form-source-type" name="source_type" class="form-select">
+                        <option value="journal">期刊</option>
+                        <option value="conference">会议</option>
+                        <option value="book_series">丛书</option>
+                        <option value="other">其他</option>
+                      </select>
+                    </div>
+
+                    <div class="col-md-4">
+                      <label class="form-label">出版年份</label>
+                      <input id="form-publication-year" class="form-control" type="number" name="publication_year">
+                    </div>
+
+                    <div class="col-md-6">
+                      <label class="form-label">来源名称</label>
+                      <input id="form-source-name" class="form-control" name="source_name">
+                    </div>
+
+                    <div class="col-md-6">
+                      <label class="form-label">出版社 / 出版方</label>
+                      <input id="form-publisher-name" class="form-control" name="publisher_name">
+                    </div>
+
+                    <div class="col-md-4">
+                      <label class="form-label">卷</label>
+                      <input id="form-volume" class="form-control" name="volume">
+                    </div>
+
+                    <div class="col-md-4">
+                      <label class="form-label">期</label>
+                      <input id="form-issue" class="form-control" name="issue">
+                    </div>
+
+                    <div class="col-md-4">
+                      <label class="form-label">页码</label>
+                      <input id="form-pages" class="form-control" name="pages">
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label">作者</label>
+                      <textarea id="form-authors-raw" class="form-control font-monospace" name="authors_raw" rows="4"></textarea>
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label">关键词</label>
+                      <input id="form-keywords-raw" class="form-control" name="keywords_raw">
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label">标签</label>
+                      <input id="form-tags-raw" class="form-control" name="tags_raw">
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label">DOI</label>
+                      <input id="form-doi" class="form-control" name="doi">
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label">摘要</label>
+                      <textarea id="form-abstract" class="form-control" name="abstract" rows="4"></textarea>
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label">备注</label>
+                      <textarea id="form-notes" class="form-control" name="notes" rows="3"></textarea>
+                    </div>
+
+                    <div class="col-md-6">
+                      <label class="form-label">阅读状态</label>
+                      <select id="form-reading-status" name="reading_status" class="form-select">
+                        <option value="unread">未读</option>
+                        <option value="reading">在读</option>
+                        <option value="read">已读</option>
+                      </select>
+                    </div>
+
+                    <div class="col-md-6">
+                      <label class="form-label">本条分类</label>
+                      <select id="form-category-id" name="category_id" class="form-select">
+                        <option value="">使用默认分类</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </form>
+
+                  <div id="form-feedback" class="small text-muted mt-3">
+                    导入前请重点检查标题、作者、来源、年份和 DOI。
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="result-summary" class="alert alert-info mt-3 d-none"></div>
+      </main>
+    </div>
+  </section>
+</div>
+
+<script src="{{ url_for('static', filename='vendor/marked.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/batch_bibtex.js') }}"></script>
+{% endblock %}

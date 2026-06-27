@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}管理后台{% endblock %}
+{% block content %}
+<section class="container-xl">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+      <h1 class="h3 mb-1">管理后台</h1>
+      <p class="text-muted mb-0">
+        {% if can_manage_roles %}
+        你可以审核注册申请，并管理次级管理员权限。
+        {% else %}
+        你可以审核注册申请，但角色管理仅限主管理员操作。
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-xl-5">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>待审核注册</strong>
+          <span class="badge text-bg-primary">{{ pending_users|length }}</span>
+        </div>
+        <div class="card-body">
+          {% if pending_users %}
+          <div class="list-group">
+            {% for user in pending_users %}
+            <div class="list-group-item">
+              <div class="d-flex justify-content-between align-items-start gap-3">
+                <div>
+                  <div class="fw-semibold">{{ user.username }}</div>
+                  <div class="small text-muted">{{ user.email or "未填写邮箱" }}</div>
+                  <div class="small text-muted">注册时间：{{ user.created_at }}</div>
+                </div>
+                <div class="d-flex gap-2">
+                  <form method="post" action="{{ url_for('admin.approve_user', user_id=user.id) }}">
+                    {{ csrf_input() }}
+                    <button class="btn btn-sm btn-success" type="submit">通过</button>
+                  </form>
+                  <form method="post" action="{{ url_for('admin.reject_user', user_id=user.id) }}">
+                    {{ csrf_input() }}
+                    <button class="btn btn-sm btn-outline-danger" type="submit">拒绝</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-muted mb-0">当前没有待审核的注册申请。</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-xl-7">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header">
+          <strong>用户权限</strong>
+        </div>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>账号</th>
+                <th>审核状态</th>
+                <th>角色</th>
+                <th>注册时间</th>
+                <th class="text-end">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for user in all_users %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ user.username }}</div>
+                  <div class="small text-muted">{{ user.email or "未填写邮箱" }}</div>
+                </td>
+                <td>
+                  {% if user.approval_status_value == "approved" %}
+                  <span class="badge text-bg-success">已通过</span>
+                  {% elif user.approval_status_value == "rejected" %}
+                  <span class="badge text-bg-danger">已拒绝</span>
+                  {% else %}
+                  <span class="badge text-bg-warning">待审核</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if user.is_admin %}
+                  <span class="badge text-bg-dark">主管理员</span>
+                  {% elif user.is_secondary_admin %}
+                  <span class="badge text-bg-info">次级管理员</span>
+                  {% else %}
+                  <span class="badge text-bg-secondary">普通用户</span>
+                  {% endif %}
+                </td>
+                <td>{{ user.created_at }}</td>
+                <td class="text-end">
+                  {% if can_manage_roles and user.id != current_user.id %}
+                    {% if not user.is_admin and not user.can_review_registrations %}
+                    <form method="post" action="{{ url_for('admin.grant_reviewer', user_id=user.id) }}" class="d-inline">
+                      {{ csrf_input() }}
+                      <button class="btn btn-sm btn-outline-primary" type="submit">设为次级管理员</button>
+                    </form>
+                    {% elif user.is_secondary_admin %}
+                    <form method="post" action="{{ url_for('admin.revoke_reviewer', user_id=user.id) }}" class="d-inline">
+                      {{ csrf_input() }}
+                      <button class="btn btn-sm btn-outline-secondary" type="submit">取消次级管理员</button>
+                    </form>
+                    {% else %}
+                    <span class="text-muted small">无需调整</span>
+                    {% endif %}
+                  {% else %}
+                  <span class="text-muted small">无可用操作</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

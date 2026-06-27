@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}{{ doc.title }}{% endblock %}
+{% block content %}
+{% set document_type_labels = {
+  'journal_article': '期刊论文',
+  'conference_paper': '会议论文',
+  'book': '图书',
+  'thesis': '学位论文',
+  'report': '报告',
+  'other': '其他'
+} %}
+{% set source_type_labels = {
+  'journal': '期刊',
+  'conference': '会议',
+  'book_series': '丛书',
+  'other': '其他'
+} %}
+{% set reading_status_labels = {
+  'unread': '未读',
+  'reading': '在读',
+  'read': '已读'
+} %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb mb-0">
+    <li class="breadcrumb-item"><a href="{{ url_for('documents.list_documents') }}">文献库</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ doc.title }}</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+  <div>
+    <h2 class="mb-1">{{ doc.title }}</h2>
+    <div class="text-muted">
+      {{ doc.authors_display or "暂无作者信息" }}
+      {% if doc.publication_year %} · {{ doc.publication_year }}{% endif %}
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-outline-primary" href="{{ url_for('documents.edit', doc_id=doc.id) }}">编辑</a>
+    <a class="btn btn-outline-secondary" href="{{ url_for('bibtex.export_one', doc_id=doc.id) }}">导出 BibTeX</a>
+    <form method="post" action="{{ url_for('documents.delete', doc_id=doc.id) }}" onsubmit="return confirm('确认删除这篇文献及其附件吗？');">
+      {{ csrf_input() }}
+      <button class="btn btn-outline-danger" type="submit">删除</button>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card mb-3">
+      <div class="card-header">元数据</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-3">文献类型</dt>
+          <dd class="col-sm-9">{{ document_type_labels.get(doc.document_type, doc.document_type) }}</dd>
+
+          <dt class="col-sm-3">来源</dt>
+          <dd class="col-sm-9">
+            {% if doc.source %}
+              {{ doc.source.name }} ({{ source_type_labels.get(doc.source.type, doc.source.type) }})
+            {% else %}
+              -
+            {% endif %}
+          </dd>
+
+          <dt class="col-sm-3">出版社</dt>
+          <dd class="col-sm-9">{{ doc.source.publisher.name if doc.source and doc.source.publisher else "-" }}</dd>
+
+          <dt class="col-sm-3">卷期页</dt>
+          <dd class="col-sm-9">{{ doc.volume or "-" }} / {{ doc.issue or "-" }} / {{ doc.pages or "-" }}</dd>
+
+          <dt class="col-sm-3">DOI</dt>
+          <dd class="col-sm-9">
+            {% if doc.doi %}
+              <a href="https://doi.org/{{ doc.doi }}" target="_blank" rel="noopener noreferrer">{{ doc.doi }}</a>
+            {% else %}
+              -
+            {% endif %}
+          </dd>
+
+          <dt class="col-sm-3">分类</dt>
+          <dd class="col-sm-9">{{ doc.category.name if doc.category else "-" }}</dd>
+
+          <dt class="col-sm-3">阅读状态</dt>
+          <dd class="col-sm-9">{{ reading_status_labels.get(doc.reading_status, doc.reading_status) }}{% if doc.rating %} · 评分 {{ doc.rating }}/5{% endif %}</dd>
+        </dl>
+      </div>
+    </div>
+
+    {% if doc.abstract %}
+    <div class="card mb-3">
+      <div class="card-header">摘要</div>
+      <div class="card-body" style="white-space: pre-wrap;">{{ doc.abstract }}</div>
+    </div>
+    {% endif %}
+
+    {% if doc.notes %}
+    <div class="card mb-3">
+      <div class="card-header">个人笔记</div>
+      <div class="card-body" style="white-space: pre-wrap;">{{ doc.notes }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header">作者</div>
+      <ul class="list-group list-group-flush">
+        {% for link in doc.author_links %}
+        <li class="list-group-item">
+          <div class="fw-semibold">{{ link.author.name }} <span class="text-muted small">#{{ link.author.code }}</span></div>
+          {% if link.author.affiliations %}
+          <div class="small text-muted">
+            {% for aff in link.author.affiliations %}{{ aff.name }}{% if not loop.last %}; {% endif %}{% endfor %}
+          </div>
+          {% endif %}
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted">暂无作者</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">关键词</div>
+      <div class="card-body">
+        {% for keyword in doc.keywords %}
+        <span class="badge bg-light text-dark border me-1 mb-1">{{ keyword.name }}</span>
+        {% else %}
+        <span class="text-muted">暂无关键词</span>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">标签</div>
+      <div class="card-body">
+        {% for tag in doc.tags %}
+        <a class="badge bg-primary text-decoration-none me-1 mb-1" href="{{ url_for('documents.search', tags=tag.id) }}">{{ tag.name }}</a>
+        {% else %}
+        <span class="text-muted">暂无标签</span>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">附件</div>
+      <ul class="list-group list-group-flush">
+        {% for file in doc.files %}
+        <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+          <a class="text-break" href="{{ url_for('documents.download_file', doc_id=doc.id, file_id=file.id) }}" target="_blank" rel="noopener noreferrer">
+            {{ file.original_name }}
+          </a>
+          <form method="post" action="{{ url_for('documents.delete_file', doc_id=doc.id, file_id=file.id) }}" onsubmit="return confirm('确认删除这个附件吗？');">
+            {{ csrf_input() }}
+            <button class="btn btn-sm btn-outline-danger" type="submit">删除</button>
+          </form>
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted">暂无附件</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

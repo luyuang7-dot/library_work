@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}导入 BibTeX{% endblock %}
+{% block content %}
+<style>
+  .bib-shell { max-width: 1160px; margin: 0 auto; }
+  .bib-title {
+    font-family: "Trebuchet MS", "Avenir Next", "Segoe UI", sans-serif;
+    font-weight: 800;
+    letter-spacing: .02em;
+    font-style: normal;
+    background: linear-gradient(90deg, #0f172a 0%, #1d4ed8 55%, #059669 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .bib-hero {
+    border: 1px solid color-mix(in srgb, var(--bs-border-color) 78%, transparent);
+    border-radius: 18px;
+    padding: .95rem 1.05rem;
+    background:
+      radial-gradient(880px 170px at 8% -25%, color-mix(in srgb, var(--bs-primary) 12%, transparent), transparent 66%),
+      radial-gradient(700px 160px at 96% -30%, color-mix(in srgb, var(--bs-success) 10%, transparent), transparent 72%),
+      var(--bs-body-bg);
+    box-shadow: 0 12px 30px rgba(15, 24, 40, .08);
+  }
+  .bib-hero-grid { display: block; }
+  .bib-lead { margin-bottom: .45rem; }
+  .bib-sample {
+    margin: 0;
+    border: 1px dashed color-mix(in srgb, var(--bs-border-color) 75%, transparent);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--bs-secondary-bg) 78%, transparent);
+    padding: .5rem .65rem;
+    font-size: .8rem;
+    line-height: 1.35;
+    min-height: 86px;
+    max-height: none;
+    overflow: auto;
+    resize: vertical;
+  }
+  .bib-kpis {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+    margin-top: .5rem;
+  }
+  .bib-kpi {
+    border: 1px solid color-mix(in srgb, var(--bs-border-color) 78%, transparent);
+    border-radius: 10px;
+    padding: .35rem .6rem;
+    background: color-mix(in srgb, var(--bs-secondary-bg) 82%, transparent);
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    white-space: nowrap;
+  }
+  .bib-kpi .t { font-size: .74rem; color: var(--bs-secondary-color); }
+  .bib-kpi .v { font-size: .9rem; font-weight: 700; }
+
+  .bib-stage {
+    margin-top: .85rem;
+    border: 1px solid color-mix(in srgb, var(--bs-border-color) 80%, transparent);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(16, 24, 40, .08);
+  }
+  .bib-stage-head {
+    padding: .9rem 1rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--bs-border-color) 82%, transparent);
+    background: color-mix(in srgb, var(--bs-body-bg) 86%, var(--bs-secondary-bg));
+  }
+  .bib-pane {
+    height: 100%;
+    padding: 1rem;
+    border-right: 1px solid color-mix(in srgb, var(--bs-border-color) 82%, transparent);
+  }
+  .bib-pane:last-child { border-right: 0; }
+  .bib-pane-title { font-weight: 700; margin-bottom: .6rem; }
+  .bib-drop {
+    border: 1px dashed color-mix(in srgb, var(--bs-border-color) 75%, transparent);
+    border-radius: 12px;
+    padding: .9rem;
+    background: color-mix(in srgb, var(--bs-secondary-bg) 70%, transparent);
+  }
+  .bib-text {
+    min-height: 340px;
+    resize: vertical;
+    border-radius: 12px;
+  }
+  .bib-actions {
+    padding: .95rem 1rem;
+    border-top: 1px solid color-mix(in srgb, var(--bs-border-color) 82%, transparent);
+    background: color-mix(in srgb, var(--bs-body-bg) 86%, var(--bs-secondary-bg));
+  }
+  .bib-actions .btn { border-radius: 999px; }
+
+  @media (max-width: 992px) {
+    .bib-pane { border-right: 0; border-bottom: 1px solid color-mix(in srgb, var(--bs-border-color) 82%, transparent); }
+    .bib-pane:last-child { border-bottom: 0; }
+  }
+</style>
+
+<div class="bib-shell">
+  <div class="bib-hero">
+    <div class="bib-hero-grid">
+      <section>
+        <h4 class="mb-1 bib-title">BibTeX 导入工作台</h4>
+        <div class="text-muted small bib-lead">支持文件上传与文本粘贴，导入后自动进入文献库管理流程。</div>
+        <pre class="bib-sample font-monospace">@article{sample2026,
+  title={A Practical Example},
+  author={Zhang, San and Li, Si},
+  year={2026},
+  journal={Journal of Examples}
+}</pre>
+      </section>
+      <section class="bib-kpis">
+        <div class="bib-kpi"><span class="t">输入模式</span><span class="v">文件 / 文本</span></div>
+        <div class="bib-kpi"><span class="t">推荐格式</span><span class="v">UTF-8 `.bib`</span></div>
+        <div class="bib-kpi"><span class="t">导出</span><span class="v">全库 `.bib`</span></div>
+      </section>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="bib-stage">
+    {{ csrf_input() }}
+    <div class="bib-stage-head d-flex justify-content-between align-items-center">
+      <div class="fw-semibold">导入源配置</div>
+      <span class="small text-muted">至少提供一种输入：上传文件 或 粘贴文本</span>
+    </div>
+
+    <div class="row g-0">
+      <div class="col-lg-4">
+        <section class="bib-pane">
+          <div class="bib-pane-title"><i class="bi bi-cloud-arrow-up"></i> 上传 `.bib` 文件</div>
+          <div class="bib-drop">
+            <label class="form-label small text-muted">选择本地 BibTeX 文件</label>
+            <input type="file" class="form-control" name="bib_file" accept=".bib,.txt">
+            <div class="small text-muted mt-2">建议单次导入一个主题文件，便于后续校验。</div>
+          </div>
+        </section>
+      </div>
+      <div class="col-lg-8">
+        <section class="bib-pane">
+          <div class="bib-pane-title"><i class="bi bi-braces"></i> 粘贴 BibTeX 内容</div>
+          <textarea class="form-control font-monospace bib-text" name="bib_text"
+            placeholder="@article{key,&#10;  title={...},&#10;  author={... and ...},&#10;  year={2023},&#10;  journal={...},&#10;  doi={...}&#10;}"></textarea>
+          <div class="small text-muted mt-2">适合快速导入少量条目，支持直接粘贴多段 BibTeX。</div>
+        </section>
+      </div>
+    </div>
+
+    <div class="bib-actions d-flex flex-wrap gap-2">
+      <button class="btn btn-primary px-4" type="submit">
+        <i class="bi bi-box-arrow-in-down"></i> 开始导入
+      </button>
+      <a class="btn btn-outline-secondary px-4" href="{{ url_for('bibtex.export_all') }}">
+        <i class="bi bi-download"></i> 导出全部为 `.bib`
+      </a>
+      <a class="btn btn-link" href="{{ url_for('documents.list_documents') }}">返回文献库</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

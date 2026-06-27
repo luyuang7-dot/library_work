@@ -1,0 +1,39 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Env / secrets
+.env
+
+# Flask / app data
+instance/
+uploads/
+output/
+*.sqlite
+*.db
+
+# Tests / IDE / temp
+.pytest_cache/
+.coverage
+htmlcov/
+.tmp_pytest/
+.tmp_pytest_base/
+.tmp_test_artifacts/
+.tmp_pytest_images/
+.tmp_piptools_env/
+.tmp_piptools_env2/
+.pip_tmp/
+.pip_cache/
+.release_stage/
+.idea/
+.vscode/
+
+# Build artifacts
+build/
+dist/
+artifacts/
+build_log.txt
+deploy.zip
