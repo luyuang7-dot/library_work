@@ -289,6 +289,12 @@ body {
   box-shadow: var(--card-shadow);
 }
 
+.settings-layout__column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .card-header {
   background-color: var(--accent);
   color: var(--fg);
