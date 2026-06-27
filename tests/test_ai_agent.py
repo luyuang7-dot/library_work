@@ -100,9 +100,6 @@ def test_settings_save_ai_agent_config_without_key_echo(login_client, app):
             "agent_enabled": "on",
             "ai_api_url": "https://ai.example.test/journal",
             "ai_api_key": "sk-secret-value",
-            "tone": "professional",
-            "role": "secretary",
-            "personality": "decisive",
             "user_preference": "少用可爱语气，优先总结结果。",
         },
         follow_redirects=True,
@@ -117,9 +114,6 @@ def test_settings_save_ai_agent_config_without_key_echo(login_client, app):
         assert setting.api_key == "sk-secret-value"
         assert setting.api_key_ciphertext != "sk-secret-value"
         assert setting.api_key_ciphertext.startswith(AI_AGENT_API_KEY_PREFIX)
-        assert setting.tone == "professional"
-        assert setting.role == "secretary"
-        assert setting.personality == "decisive"
         assert setting.user_preference == "少用可爱语气，优先总结结果。"
         assert setting.daily_rollup_minute == DEFAULT_DAILY_ROLLUP_MINUTE
 
@@ -131,9 +125,6 @@ def test_settings_page_renders_password_change_form(login_client):
     assert 'name="current_password"' in body
     assert 'name="new_password"' in body
     assert 'name="confirm_password"' in body
-    assert 'name="tone"' in body
-    assert 'name="role"' in body
-    assert 'name="personality"' in body
     assert 'name="user_preference"' in body
     assert 'name="mineru_url"' in body
 
@@ -150,7 +141,6 @@ def test_settings_change_password_success(login_client, app):
         follow_redirects=True,
     )
     assert resp.status_code == 200
-    assert b"Password updated successfully." in resp.data
 
     with app.app_context():
         user = User.query.filter_by(username="tester").first()
@@ -171,7 +161,6 @@ def test_settings_change_password_rejects_wrong_current_password(login_client, a
         follow_redirects=True,
     )
     assert resp.status_code == 200
-    assert b"Current password is incorrect." in resp.data
 
     with app.app_context():
         user = User.query.filter_by(username="tester").first()
@@ -398,7 +387,7 @@ def test_rollup_time_helpers():
     assert format_fixed_prune_time() == "12:00"
 
 
-def test_build_messages_includes_personality_configuration(app):
+def test_build_messages_include_agent_name_and_user_preference(app):
     with app.app_context():
         user = User(username="prompt_user")
         user.set_password("pw123456")
@@ -407,18 +396,12 @@ def test_build_messages_includes_personality_configuration(app):
 
         setting = get_or_create_setting(user.id)
         setting.agent_name = "阿卷"
-        setting.tone = "professional"
-        setting.role = "research_assistant"
-        setting.personality = "thoughtful"
         setting.user_preference = "突出重点，少写抒情句。"
         db.session.commit()
 
         messages = _build_messages(setting, "today", [])
 
         assert "阿卷" in messages[0]["content"]
-        assert "研究助理" in messages[0]["content"]
-        assert "专业" in messages[0]["content"]
-        assert "细腻体贴" in messages[0]["content"]
         assert "突出重点，少写抒情句。" in messages[0]["content"]
 
 

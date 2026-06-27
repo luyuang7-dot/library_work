@@ -40,7 +40,7 @@
           <div class="mb-3">
             <label class="form-label">显示名称</label>
             <input type="text" class="form-control" name="agent_name"
-                   value="{{ agent.agent_name or '小助' }}" maxlength="64">
+                   value="{{ agent.agent_name or 'AI助手' }}" maxlength="64">
           </div>
 
           <div class="mb-3">
@@ -56,33 +56,6 @@
             <input type="text" class="form-control" name="ai_model"
                    value="{{ agent.model or '' }}" maxlength="64"
                    placeholder="deepseek-chat">
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">语气</label>
-            <select class="form-select" name="tone">
-              {% for key, label in tone_options.items() %}
-              <option value="{{ key }}" {% if (agent.tone or 'gentle') == key %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">身份</label>
-            <select class="form-select" name="role">
-              {% for key, label in role_options.items() %}
-              <option value="{{ key }}" {% if (agent.role or 'companion') == key %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">性格</label>
-            <select class="form-select" name="personality">
-              {% for key, label in personality_options.items() %}
-              <option value="{{ key }}" {% if (agent.personality or 'thoughtful') == key %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
           </div>
 
           <div class="mb-3">

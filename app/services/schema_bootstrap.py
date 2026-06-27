@@ -13,9 +13,6 @@ _DOC_NEW_COLUMNS = {
 _AI_AGENT_SETTING_NEW_COLUMNS = {
     "last_rollup_at": "DATETIME NULL",
     "daily_rollup_minute": "INTEGER NOT NULL DEFAULT 1439",
-    "tone": "VARCHAR(32) NOT NULL DEFAULT 'gentle'",
-    "role": "VARCHAR(32) NOT NULL DEFAULT 'companion'",
-    "personality": "VARCHAR(32) NOT NULL DEFAULT 'thoughtful'",
     "user_preference": "VARCHAR(500) NOT NULL DEFAULT ''",
 }
 

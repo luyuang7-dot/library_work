@@ -10,9 +10,6 @@ from ..extensions import db
 from ..models import UserSetting
 from ..services import mineru_client
 from ..services.ai_agent import (
-    AI_AGENT_PERSONALITY_OPTIONS,
-    AI_AGENT_ROLE_OPTIONS,
-    AI_AGENT_TONE_OPTIONS,
     DEFAULT_AGENT_NAME,
     DEFAULT_DAILY_ROLLUP_MINUTE,
     InvalidAIAgentURLError,
@@ -125,9 +122,6 @@ def index():
         agent=agent,
         daily_rollup_time=format_daily_rollup_time(DEFAULT_DAILY_ROLLUP_MINUTE),
         daily_prune_time=format_fixed_prune_time(),
-        tone_options=AI_AGENT_TONE_OPTIONS,
-        role_options=AI_AGENT_ROLE_OPTIONS,
-        personality_options=AI_AGENT_PERSONALITY_OPTIONS,
     )
 
 

@@ -365,7 +365,7 @@ class AIAgentSetting(db.Model):
     __tablename__ = "ai_agent_settings"
 
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
-    agent_name = db.Column(db.String(64), nullable=False, default="小助")
+    agent_name = db.Column(db.String(64), nullable=False, default="AI助手")
     enabled = db.Column(db.Boolean, nullable=False, default=True)
     facing = db.Column(db.String(8), nullable=False, default="right")
     position_x = db.Column(db.Integer, nullable=False, default=24)
@@ -373,9 +373,6 @@ class AIAgentSetting(db.Model):
     api_url = db.Column(db.String(512))
     _api_key = db.Column("api_key", db.Text)
     model = db.Column(db.String(64))
-    tone = db.Column(db.String(32), nullable=False, default="gentle")
-    role = db.Column(db.String(32), nullable=False, default="companion")
-    personality = db.Column(db.String(32), nullable=False, default="thoughtful")
     user_preference = db.Column(db.String(500), nullable=False, default="")
     daily_rollup_minute = db.Column(db.Integer, nullable=False, default=23 * 60 + 59)
     last_rollup_at = db.Column(db.DateTime, nullable=True)

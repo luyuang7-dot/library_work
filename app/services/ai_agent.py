@@ -13,7 +13,7 @@ from flask import current_app, has_app_context
 from ..extensions import db
 from ..models import AIAgentActivity, AIAgentJournal, AIAgentSetting
 
-DEFAULT_AGENT_NAME = "小吱"
+DEFAULT_AGENT_NAME = "AI助手"
 DEFAULT_POSITION_X = 24
 DEFAULT_POSITION_Y = 24
 DEFAULT_DAILY_ROLLUP_MINUTE = 23 * 60 + 59
@@ -21,35 +21,6 @@ DEFAULT_DAILY_PRUNE_MINUTE = 12 * 60
 DEFAULT_DAILY_PRUNE_WINDOW_MINUTES = 60
 WEEKLY_ROLLUP_DAYS = 7
 ACTIVITY_FETCH_LIMIT = 500
-
-DEFAULT_TONE = "gentle"
-DEFAULT_ROLE = "companion"
-DEFAULT_PERSONALITY = "thoughtful"
-
-AI_AGENT_TONE_OPTIONS = {
-    "gentle": "温柔陪伴型：语气柔和、耐心，让人放松",
-    "professional": "专业干练型：表达清晰、克制，重点明确",
-    "lively": "轻快活力型：语气明快、积极，有互动感",
-}
-
-AI_AGENT_ROLE_OPTIONS = {
-    "companion": "桌面伙伴：像一直陪着你的贴身小助手",
-    "secretary": "秘书助理：像细致可靠、会帮你理顺事项的助理",
-    "research_assistant": "研究助理：像擅长归纳总结、关注进度的学术助手",
-}
-
-AI_AGENT_PERSONALITY_OPTIONS = {
-    "thoughtful": "细腻体贴：善于总结重点，也会照顾你的节奏",
-    "decisive": "果断利落：更偏行动导向，结论和建议更直接",
-    "playful": "轻松俏皮：表达更亲切活泼，但不脱离事实",
-}
-
-AI_AGENT_PROFILE_FIELDS = {
-    "tone": (AI_AGENT_TONE_OPTIONS, DEFAULT_TONE),
-    "role": (AI_AGENT_ROLE_OPTIONS, DEFAULT_ROLE),
-    "personality": (AI_AGENT_PERSONALITY_OPTIONS, DEFAULT_PERSONALITY),
-}
-
 
 class AIAgentError(Exception):
     """Raised when the configured AI agent service cannot generate a journal."""
@@ -128,53 +99,17 @@ def format_fixed_prune_time() -> str:
     return f"{DEFAULT_DAILY_PRUNE_MINUTE // 60:02d}:{DEFAULT_DAILY_PRUNE_MINUTE % 60:02d}"
 
 
-def _normalize_choice(value: str | None, options: dict[str, str], default: str) -> str:
-    raw = (value or "").strip()
-    return raw if raw in options else default
-
-
-def normalize_profile_choice(field: str, value: str | None) -> str:
-    options, default = AI_AGENT_PROFILE_FIELDS[field]
-    return _normalize_choice(value, options, default)
-
-
 def _normalize_user_preference(value: str | None) -> str:
     return (value or "").strip()[:500]
 
 
-def _normalize_setting_profile(setting: AIAgentSetting) -> bool:
-    changed = False
-    for field in AI_AGENT_PROFILE_FIELDS:
-        normalized = normalize_profile_choice(field, getattr(setting, field, None))
-        if getattr(setting, field, None) != normalized:
-            setattr(setting, field, normalized)
-            changed = True
-
-    normalized_preference = _normalize_user_preference(
-        getattr(setting, "user_preference", "")
-    )
-    if getattr(setting, "user_preference", "") != normalized_preference:
-        setting.user_preference = normalized_preference
-        changed = True
-    return changed
-
-
 def apply_agent_profile_updates(setting: AIAgentSetting, source) -> None:
-    for field in AI_AGENT_PROFILE_FIELDS:
-        if field in source:
-            setattr(setting, field, normalize_profile_choice(field, source.get(field)))
     if "user_preference" in source:
         setting.user_preference = _normalize_user_preference(source.get("user_preference"))
 
 
 def _serialize_setting_profile(setting: AIAgentSetting) -> dict:
     return {
-        "tone": normalize_profile_choice("tone", getattr(setting, "tone", None)),
-        "role": normalize_profile_choice("role", getattr(setting, "role", None)),
-        "personality": normalize_profile_choice(
-            "personality",
-            getattr(setting, "personality", None),
-        ),
         "user_preference": _normalize_user_preference(
             getattr(setting, "user_preference", "")
         ),
@@ -192,9 +127,6 @@ def get_or_create_setting(user_id: int, commit: bool = True) -> AIAgentSetting:
             facing="right",
             position_x=DEFAULT_POSITION_X,
             position_y=DEFAULT_POSITION_Y,
-            tone=DEFAULT_TONE,
-            role=DEFAULT_ROLE,
-            personality=DEFAULT_PERSONALITY,
             user_preference="",
             daily_rollup_minute=DEFAULT_DAILY_ROLLUP_MINUTE,
         )
@@ -205,7 +137,11 @@ def get_or_create_setting(user_id: int, commit: bool = True) -> AIAgentSetting:
     if setting.daily_rollup_minute != DEFAULT_DAILY_ROLLUP_MINUTE:
         setting.daily_rollup_minute = DEFAULT_DAILY_ROLLUP_MINUTE
         needs_save = True
-    if _normalize_setting_profile(setting):
+    normalized_preference = _normalize_user_preference(
+        getattr(setting, "user_preference", "")
+    )
+    if getattr(setting, "user_preference", "") != normalized_preference:
+        setting.user_preference = normalized_preference
         needs_save = True
     if needs_save:
         if commit:
@@ -543,9 +479,6 @@ def _build_messages(
 ) -> list[dict]:
     agent_name = setting.agent_name or DEFAULT_AGENT_NAME
     profile = _serialize_setting_profile(setting)
-    tone = profile["tone"]
-    role = profile["role"]
-    personality = profile["personality"]
     user_preference = profile["user_preference"]
     preference_block = (
         f"用户额外偏好：{user_preference}。请在不偏离事实的前提下尽量满足。\n"
@@ -554,9 +487,6 @@ def _build_messages(
     )
     system_prompt = (
         f"你是用户在 Personal Library 文献管理系统里的桌面伙伴，名字叫{agent_name}。"
-        f"你的身份设定是：{AI_AGENT_ROLE_OPTIONS[role]}。"
-        f"你的语气要求是：{AI_AGENT_TONE_OPTIONS[tone]}。"
-        f"你的性格要求是：{AI_AGENT_PERSONALITY_OPTIONS[personality]}。"
         f"{preference_block}"
         "请用第一人称写中文日志，要求简洁、有条理、基于事实、使用 Markdown，并在结尾给一句简短鼓励。"
     )
