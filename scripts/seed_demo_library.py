@@ -25,12 +25,12 @@ USER_AGENT = "Personal Library demo seeder/1.0 (mailto:demo@example.com)"
 DEFAULT_USERNAME = "demo"
 DEFAULT_COUNT = 1000
 TOPICS = [
-    {"query": "database systems", "category": "数据库系统", "tags": ["数据库", "SQL", "事务", "索引", "查询优化"], "keywords": ["database", "transaction", "index", "query optimization"]},
-    {"query": "information retrieval", "category": "信息检索", "tags": ["检索", "推荐", "排序", "文本处理", "搜索"], "keywords": ["retrieval", "ranking", "search", "text mining"]},
-    {"query": "machine learning", "category": "机器学习", "tags": ["机器学习", "模型", "分类", "特征", "预测"], "keywords": ["machine learning", "classification", "feature", "prediction"]},
-    {"query": "natural language processing", "category": "自然语言处理", "tags": ["NLP", "文本", "语言模型", "抽取", "生成"], "keywords": ["nlp", "language model", "extraction", "generation"]},
-    {"query": "computer vision", "category": "计算机视觉", "tags": ["视觉", "图像", "检测", "识别", "深度学习"], "keywords": ["vision", "image", "detection", "recognition"]},
-    {"query": "software engineering", "category": "软件工程", "tags": ["工程", "测试", "代码", "系统", "评估"], "keywords": ["software", "testing", "code", "system", "evaluation"]},
+    {"query": "database systems", "category": "\u6570\u636e\u5e93\u7cfb\u7edf", "tags": ["\u6570\u636e\u5e93", "SQL", "\u4e8b\u52a1", "\u7d22\u5f15", "\u67e5\u8be2\u4f18\u5316"], "keywords": ["database", "transaction", "index", "query optimization"]},
+    {"query": "information retrieval", "category": "\u4fe1\u606f\u68c0\u7d22", "tags": ["\u68c0\u7d22", "\u63a8\u8350", "\u6392\u5e8f", "\u6587\u672c\u5904\u7406", "\u641c\u7d22"], "keywords": ["retrieval", "ranking", "search", "text mining"]},
+    {"query": "machine learning", "category": "\u673a\u5668\u5b66\u4e60", "tags": ["\u673a\u5668\u5b66\u4e60", "\u6a21\u578b", "\u5206\u7c7b", "\u7279\u5f81", "\u9884\u6d4b"], "keywords": ["machine learning", "classification", "feature", "prediction"]},
+    {"query": "natural language processing", "category": "\u81ea\u7136\u8bed\u8a00\u5904\u7406", "tags": ["NLP", "\u6587\u672c", "\u8bed\u8a00\u6a21\u578b", "\u62bd\u53d6", "\u751f\u6210"], "keywords": ["nlp", "language model", "extraction", "generation"]},
+    {"query": "computer vision", "category": "\u8ba1\u7b97\u673a\u89c6\u89c9", "tags": ["\u89c6\u89c9", "\u56fe\u50cf", "\u68c0\u6d4b", "\u8bc6\u522b", "\u6df1\u5ea6\u5b66\u4e60"], "keywords": ["vision", "image", "detection", "recognition"]},
+    {"query": "software engineering", "category": "\u8f6f\u4ef6\u5de5\u7a0b", "tags": ["\u5de5\u7a0b", "\u6d4b\u8bd5", "\u4ee3\u7801", "\u7cfb\u7edf", "\u8bc4\u4f30"], "keywords": ["software", "testing", "code", "system", "evaluation"]},
 ]
 
 COMMON_AUTHORS = ["Y. Zhang", "J. Wang", "X. Li", "H. Chen", "Q. Liu", "S. Wang", "K. Zhang", "M. Wang", "T. Li", "W. Chen"]
