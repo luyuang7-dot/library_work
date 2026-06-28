@@ -99,3 +99,23 @@ def ensure_ai_agent_columns(session: Session) -> None:
             continue
         session.execute(text(f"ALTER TABLE ai_agent_journals ADD COLUMN {name} {ddl}"))
     session.commit()
+
+
+def ensure_ai_agent_settings_rows(session: Session) -> None:
+    bind = session.get_bind()
+    inspector = inspect(bind)
+    if "users" not in inspector.get_table_names():
+        return
+    if "ai_agent_settings" not in inspector.get_table_names():
+        return
+
+    session.execute(
+        text(
+            "INSERT INTO ai_agent_settings (user_id, agent_name, enabled, facing, position_x, position_y, user_preference, daily_rollup_minute, created_at, updated_at) "
+            "SELECT u.id, 'AI助手', 1, 'right', 24, 24, '', 1439, NOW(), NOW() "
+            "FROM users u "
+            "LEFT JOIN ai_agent_settings s ON s.user_id = u.id "
+            "WHERE s.user_id IS NULL"
+        )
+    )
+    session.commit()

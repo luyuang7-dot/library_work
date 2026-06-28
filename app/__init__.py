@@ -76,6 +76,7 @@ def register_cli_commands(app: Flask) -> None:
         """Run one-time legacy schema repair helpers manually."""
         from .services.schema_bootstrap import (
             ensure_ai_agent_columns,
+            ensure_ai_agent_settings_rows,
             ensure_document_columns,
             ensure_user_admin_columns,
         )
@@ -85,6 +86,7 @@ def register_cli_commands(app: Flask) -> None:
             ensure_user_admin_columns(db.session)
             ensure_document_columns(db.session)
             ensure_ai_agent_columns(db.session)
+            ensure_ai_agent_settings_rows(db.session)
         click.echo("Legacy schema repair completed.")
 
     @app.cli.command("ai-agent-rollup")

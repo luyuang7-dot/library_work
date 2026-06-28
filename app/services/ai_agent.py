@@ -134,6 +134,18 @@ def get_or_create_setting(user_id: int, commit: bool = True) -> AIAgentSetting:
         needs_save = True
     elif setting.migrate_api_key_to_encrypted():
         needs_save = True
+    if not getattr(setting, "agent_name", None):
+        setting.agent_name = DEFAULT_AGENT_NAME
+        needs_save = True
+    if getattr(setting, "facing", None) not in {"left", "right"}:
+        setting.facing = "right"
+        needs_save = True
+    if getattr(setting, "position_x", None) is None:
+        setting.position_x = DEFAULT_POSITION_X
+        needs_save = True
+    if getattr(setting, "position_y", None) is None:
+        setting.position_y = DEFAULT_POSITION_Y
+        needs_save = True
     if setting.daily_rollup_minute != DEFAULT_DAILY_ROLLUP_MINUTE:
         setting.daily_rollup_minute = DEFAULT_DAILY_ROLLUP_MINUTE
         needs_save = True
