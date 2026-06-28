@@ -190,6 +190,17 @@ def _ensure_row(model, **kwargs):
     return row
 
 
+def _dedupe_preserve_order(values: Iterable[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
+    return out
+
+
 def _clear_demo_data(user_id: int) -> None:
     for doc in Document.query.filter_by(user_id=user_id).all():
         db.session.delete(doc)
@@ -230,6 +241,10 @@ def main() -> None:
 
         collected = collected[:args.count]
         rng.shuffle(collected)
+        for item in collected:
+            item.tags = _dedupe_preserve_order(item.tags)
+            item.keywords = _dedupe_preserve_order(item.keywords)
+            item.authors = _dedupe_preserve_order(item.authors)
 
         category_cache = {
             name: _ensure_row(Category, user_id=user.id, name=name)
