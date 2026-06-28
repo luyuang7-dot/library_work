@@ -4,10 +4,16 @@ import argparse
 import math
 import random
 import re
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Iterable
 
 import requests
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from app import create_app
 from app.extensions import db
