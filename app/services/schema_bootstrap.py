@@ -16,6 +16,8 @@ _AI_AGENT_SETTING_NEW_COLUMNS = {
     "user_preference": "VARCHAR(500) NOT NULL DEFAULT ''",
 }
 
+_AI_AGENT_SETTING_DROP_COLUMNS = ("tone", "role", "personality")
+
 _AI_AGENT_JOURNAL_NEW_COLUMNS = {
     "archived_at": "DATETIME NULL",
 }
@@ -98,6 +100,16 @@ def ensure_ai_agent_columns(session: Session) -> None:
         if name in existing_journal_columns:
             continue
         session.execute(text(f"ALTER TABLE ai_agent_journals ADD COLUMN {name} {ddl}"))
+    session.commit()
+
+    inspector = inspect(bind)
+    existing_setting_columns = {
+        column["name"] for column in inspector.get_columns("ai_agent_settings")
+    }
+    for name in _AI_AGENT_SETTING_DROP_COLUMNS:
+        if name not in existing_setting_columns:
+            continue
+        session.execute(text(f"ALTER TABLE ai_agent_settings DROP COLUMN {name}"))
     session.commit()
 
 
