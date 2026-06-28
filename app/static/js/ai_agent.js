@@ -11,7 +11,7 @@
 
   const AVATAR_SIZE = 144;
   const state = {
-    agent_name: "小咔",
+    agent_name: "AI助手",
     enabled: true,
     facing: "right",
     position_x: 24,
@@ -98,8 +98,8 @@
     shell.style.height = `${AVATAR_SIZE}px`;
     shell.style.left = `${x}px`;
     shell.style.bottom = `${y}px`;
-    label.textContent = state.agent_name || "小咔";
-    nameInput.value = state.agent_name || "小咔";
+    label.textContent = state.agent_name || "AI助手";
+    nameInput.value = state.agent_name || "AI助手";
   }
 
   async function postJson(url, payload) {
@@ -215,7 +215,7 @@
     if (!action) return;
     const kind = action.dataset.agentAction;
     if (kind === "rename") {
-      saveState({ agent_name: nameInput.value.trim() || "小咔" });
+      saveState({ agent_name: nameInput.value.trim() || "AI助手" });
     } else if (kind === "face") {
       saveState({ facing: state.facing === "left" ? "right" : "left" });
     } else if (kind === "close") {

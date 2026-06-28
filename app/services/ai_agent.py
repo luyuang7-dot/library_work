@@ -21,6 +21,11 @@ DEFAULT_DAILY_PRUNE_MINUTE = 12 * 60
 DEFAULT_DAILY_PRUNE_WINDOW_MINUTES = 60
 WEEKLY_ROLLUP_DAYS = 7
 ACTIVITY_FETCH_LIMIT = 500
+_LEGACY_AGENT_NAME_VALUES = {
+    "AI??",
+    "AI助手",
+    "AI鍔╂墜",
+}
 
 class AIAgentError(Exception):
     """Raised when the configured AI agent service cannot generate a journal."""
@@ -103,6 +108,13 @@ def _normalize_user_preference(value: str | None) -> str:
     return (value or "").strip()[:500]
 
 
+def _normalize_agent_name(value: str | None) -> str:
+    name = (value or "").strip()[:64]
+    if not name or name in _LEGACY_AGENT_NAME_VALUES:
+        return DEFAULT_AGENT_NAME
+    return name
+
+
 def apply_agent_profile_updates(setting: AIAgentSetting, source) -> None:
     if "user_preference" in source:
         setting.user_preference = _normalize_user_preference(source.get("user_preference"))
@@ -134,8 +146,9 @@ def get_or_create_setting(user_id: int, commit: bool = True) -> AIAgentSetting:
         needs_save = True
     elif setting.migrate_api_key_to_encrypted():
         needs_save = True
-    if not getattr(setting, "agent_name", None):
-        setting.agent_name = DEFAULT_AGENT_NAME
+    normalized_name = _normalize_agent_name(getattr(setting, "agent_name", None))
+    if getattr(setting, "agent_name", None) != normalized_name:
+        setting.agent_name = normalized_name
         needs_save = True
     if getattr(setting, "facing", None) not in {"left", "right"}:
         setting.facing = "right"
@@ -166,7 +179,7 @@ def get_or_create_setting(user_id: int, commit: bool = True) -> AIAgentSetting:
 def serialize_setting(setting: AIAgentSetting) -> dict:
     profile = _serialize_setting_profile(setting)
     return {
-        "agent_name": setting.agent_name or DEFAULT_AGENT_NAME,
+        "agent_name": _normalize_agent_name(setting.agent_name),
         "enabled": bool(setting.enabled),
         "facing": setting.facing if setting.facing in {"left", "right"} else "right",
         "position_x": int(setting.position_x or DEFAULT_POSITION_X),

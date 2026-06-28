@@ -17,6 +17,7 @@ _AI_AGENT_SETTING_NEW_COLUMNS = {
 }
 
 _AI_AGENT_SETTING_DROP_COLUMNS = ("tone", "role", "personality")
+_LEGACY_AGENT_NAME_VALUES = ("AI??", "AI鍔╂墜")
 
 _AI_AGENT_JOURNAL_NEW_COLUMNS = {
     "archived_at": "DATETIME NULL",
@@ -128,6 +129,15 @@ def ensure_ai_agent_settings_rows(session: Session) -> None:
             "FROM users u "
             "LEFT JOIN ai_agent_settings s ON s.user_id = u.id "
             "WHERE s.user_id IS NULL"
+        )
+    )
+    session.commit()
+
+    session.execute(
+        text(
+            "UPDATE ai_agent_settings "
+            "SET agent_name = 'AI助手' "
+            "WHERE agent_name IN ('AI??', 'AI鍔╂墜') OR agent_name IS NULL OR agent_name = ''"
         )
     )
     session.commit()
