@@ -24,14 +24,112 @@ OPENALEX_URL = "https://api.openalex.org/works"
 USER_AGENT = "Personal Library demo seeder/1.0 (mailto:demo@example.com)"
 DEFAULT_USERNAME = "demo"
 DEFAULT_COUNT = 1000
-TOPICS = [
-    {"query": "database systems", "category": "\u6570\u636e\u5e93\u7cfb\u7edf", "tags": ["\u6570\u636e\u5e93", "SQL", "\u4e8b\u52a1", "\u7d22\u5f15", "\u67e5\u8be2\u4f18\u5316"], "keywords": ["database", "transaction", "index", "query optimization"]},
-    {"query": "information retrieval", "category": "\u4fe1\u606f\u68c0\u7d22", "tags": ["\u68c0\u7d22", "\u63a8\u8350", "\u6392\u5e8f", "\u6587\u672c\u5904\u7406", "\u641c\u7d22"], "keywords": ["retrieval", "ranking", "search", "text mining"]},
-    {"query": "machine learning", "category": "\u673a\u5668\u5b66\u4e60", "tags": ["\u673a\u5668\u5b66\u4e60", "\u6a21\u578b", "\u5206\u7c7b", "\u7279\u5f81", "\u9884\u6d4b"], "keywords": ["machine learning", "classification", "feature", "prediction"]},
-    {"query": "natural language processing", "category": "\u81ea\u7136\u8bed\u8a00\u5904\u7406", "tags": ["NLP", "\u6587\u672c", "\u8bed\u8a00\u6a21\u578b", "\u62bd\u53d6", "\u751f\u6210"], "keywords": ["nlp", "language model", "extraction", "generation"]},
-    {"query": "computer vision", "category": "\u8ba1\u7b97\u673a\u89c6\u89c9", "tags": ["\u89c6\u89c9", "\u56fe\u50cf", "\u68c0\u6d4b", "\u8bc6\u522b", "\u6df1\u5ea6\u5b66\u4e60"], "keywords": ["vision", "image", "detection", "recognition"]},
-    {"query": "software engineering", "category": "\u8f6f\u4ef6\u5de5\u7a0b", "tags": ["\u5de5\u7a0b", "\u6d4b\u8bd5", "\u4ee3\u7801", "\u7cfb\u7edf", "\u8bc4\u4f30"], "keywords": ["software", "testing", "code", "system", "evaluation"]},
+TOPIC_GROUPS = [
+    {
+        "root": "\u6570\u636e\u5e93\u7cfb\u7edf",
+        "children": [
+            {
+                "query": "database transactions",
+                "category": "\u4e8b\u52a1\u5904\u7406",
+                "tags": ["\u6570\u636e\u5e93", "SQL", "\u4e8b\u52a1", "\u7d22\u5f15", "\u67e5\u8be2\u4f18\u5316"],
+                "keywords": ["database", "transaction", "index", "query optimization"],
+            },
+            {
+                "query": "database indexing and query optimization",
+                "category": "\u67e5\u8be2\u4f18\u5316",
+                "tags": ["\u6570\u636e\u5e93", "SQL", "\u4f18\u5316", "\u5f15\u64ce", "\u7d22\u5f15"],
+                "keywords": ["database", "optimization", "index", "query"],
+            },
+        ],
+    },
+    {
+        "root": "\u4fe1\u606f\u68c0\u7d22",
+        "children": [
+            {
+                "query": "information retrieval ranking",
+                "category": "\u68c0\u7d22\u6392\u5e8f",
+                "tags": ["\u68c0\u7d22", "\u63a8\u8350", "\u6392\u5e8f", "\u6587\u672c\u5904\u7406", "\u641c\u7d22"],
+                "keywords": ["retrieval", "ranking", "search", "text mining"],
+            },
+            {
+                "query": "recommender systems information retrieval",
+                "category": "\u63a8\u8350\u7cfb\u7edf",
+                "tags": ["\u63a8\u8350", "\u68c0\u7d22", "\u7528\u6237\u6a21\u578b", "\u7279\u5f81", "\u8bc4\u4f30"],
+                "keywords": ["recommendation", "retrieval", "feature", "evaluation"],
+            },
+        ],
+    },
+    {
+        "root": "\u673a\u5668\u5b66\u4e60",
+        "children": [
+            {
+                "query": "machine learning classification",
+                "category": "\u5206\u7c7b\u4e0e\u9884\u6d4b",
+                "tags": ["\u673a\u5668\u5b66\u4e60", "\u6a21\u578b", "\u5206\u7c7b", "\u7279\u5f81", "\u9884\u6d4b"],
+                "keywords": ["machine learning", "classification", "feature", "prediction"],
+            },
+            {
+                "query": "feature engineering machine learning",
+                "category": "\u7279\u5f81\u5de5\u7a0b",
+                "tags": ["\u7279\u5f81", "\u673a\u5668\u5b66\u4e60", "\u6a21\u578b", "\u4f18\u5316", "\u8bc4\u4f30"],
+                "keywords": ["feature", "engineering", "optimization", "evaluation"],
+            },
+        ],
+    },
+    {
+        "root": "\u81ea\u7136\u8bed\u8a00\u5904\u7406",
+        "children": [
+            {
+                "query": "natural language processing language model",
+                "category": "\u8bed\u8a00\u6a21\u578b",
+                "tags": ["NLP", "\u6587\u672c", "\u8bed\u8a00\u6a21\u578b", "\u62bd\u53d6", "\u751f\u6210"],
+                "keywords": ["nlp", "language model", "extraction", "generation"],
+            },
+            {
+                "query": "text generation natural language processing",
+                "category": "\u6587\u672c\u751f\u6210",
+                "tags": ["NLP", "\u751f\u6210", "\u6587\u672c", "\u8bed\u8a00\u6a21\u578b", "\u63a8\u7406"],
+                "keywords": ["generation", "nlp", "text", "inference"],
+            },
+        ],
+    },
+    {
+        "root": "\u8ba1\u7b97\u673a\u89c6\u89c9",
+        "children": [
+            {
+                "query": "computer vision object detection",
+                "category": "\u76ee\u6807\u68c0\u6d4b",
+                "tags": ["\u89c6\u89c9", "\u56fe\u50cf", "\u68c0\u6d4b", "\u8bc6\u522b", "\u6df1\u5ea6\u5b66\u4e60"],
+                "keywords": ["vision", "image", "detection", "recognition"],
+            },
+            {
+                "query": "image recognition computer vision",
+                "category": "\u56fe\u50cf\u8bc6\u522b",
+                "tags": ["\u89c6\u89c9", "\u56fe\u50cf", "\u8bc6\u522b", "\u7279\u5f81", "\u6a21\u578b"],
+                "keywords": ["vision", "image", "recognition", "feature"],
+            },
+        ],
+    },
+    {
+        "root": "\u8f6f\u4ef6\u5de5\u7a0b",
+        "children": [
+            {
+                "query": "software testing",
+                "category": "\u8f6f\u4ef6\u6d4b\u8bd5",
+                "tags": ["\u5de5\u7a0b", "\u6d4b\u8bd5", "\u4ee3\u7801", "\u7cfb\u7edf", "\u8bc4\u4f30"],
+                "keywords": ["software", "testing", "code", "system", "evaluation"],
+            },
+            {
+                "query": "software engineering empirical studies",
+                "category": "\u5b9e\u8bc1\u7814\u7a76",
+                "tags": ["\u5de5\u7a0b", "\u7cfb\u7edf", "\u6570\u636e", "\u8bc4\u4f30", "\u7814\u7a76"],
+                "keywords": ["software", "system", "data", "evaluation", "research"],
+            },
+        ],
+    },
 ]
+
+TOPICS = [child for group in TOPIC_GROUPS for child in group["children"]]
 
 COMMON_AUTHORS = ["Y. Zhang", "J. Wang", "X. Li", "H. Chen", "Q. Liu", "S. Wang", "K. Zhang", "M. Wang", "T. Li", "W. Chen"]
 JOURNAL_NAMES = [
@@ -211,6 +309,27 @@ def _clear_demo_data(user_id: int) -> None:
     db.session.flush()
 
 
+def _ensure_category_row(user_id: int, name: str, parent_id: int | None = None) -> Category:
+    row = Category.query.filter_by(user_id=user_id, name=name, parent_id=parent_id).first()
+    if row is None:
+        row = Category(user_id=user_id, name=name, parent_id=parent_id)
+        db.session.add(row)
+        db.session.flush()
+    return row
+
+
+def _build_category_tree(user_id: int) -> dict[str, Category]:
+    roots = {}
+    for group in TOPIC_GROUPS:
+        roots[group["root"]] = _ensure_category_row(user_id, group["root"], None)
+    mapping: dict[str, Category] = {}
+    for group in TOPIC_GROUPS:
+        root = roots[group["root"]]
+        for child in group["children"]:
+            mapping[child["category"]] = _ensure_category_row(user_id, child["category"], root.id)
+    return mapping
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed demo user with realistic paper data.")
     parser.add_argument("--username", default=DEFAULT_USERNAME)
@@ -246,10 +365,7 @@ def main() -> None:
             item.keywords = _dedupe_preserve_order(item.keywords)
             item.authors = _dedupe_preserve_order(item.authors)
 
-        category_cache = {
-            name: _ensure_row(Category, user_id=user.id, name=name)
-            for name in {item.category_name for item in collected}
-        }
+        category_cache = _build_category_tree(user.id)
         tag_cache = {
             name: _ensure_row(Tag, user_id=user.id, name=name)
             for name in {tag for item in collected for tag in item.tags}
