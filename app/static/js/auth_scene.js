@@ -15,10 +15,8 @@ function setupAuthScene(root) {
   let isTyping = false;
   let lookAtEachOther = false;
   let passwordVisible = false;
-  let passwordHasValue = false;
-  let purplePeeking = false;
+  let activeFieldType = null;
   let typingTimer = null;
-  let peekTimer = null;
 
   const socials = Array.from(root.querySelectorAll("[data-auth-social]"));
 
@@ -30,19 +28,15 @@ function setupAuthScene(root) {
 
   document.addEventListener("mousemove", onMouseMove);
   textInputs.forEach(input => {
-    input.addEventListener("focus", startTypingMode);
+    input.addEventListener("focus", () => activateFieldMode(input));
     input.addEventListener("blur", stopTypingModeSoon);
-    input.addEventListener("input", startTypingMode);
+    input.addEventListener("input", () => activateFieldMode(input));
   });
 
   passwordInputs.forEach(input => {
-    input.addEventListener("focus", startTypingMode);
+    input.addEventListener("focus", () => activateFieldMode(input));
     input.addEventListener("blur", stopTypingModeSoon);
-    input.addEventListener("input", () => {
-      passwordHasValue = passwordInputs.some(field => field.value.length > 0);
-      startTypingMode();
-      syncPasswordPeeking();
-    });
+    input.addEventListener("input", () => activateFieldMode(input));
   });
 
   socials.forEach(button => {
@@ -54,6 +48,7 @@ function setupAuthScene(root) {
   });
 
   toggles.forEach(toggle => {
+    toggle.addEventListener("mousedown", event => event.preventDefault());
     toggle.addEventListener("click", () => {
       const wrap = toggle.closest(".auth-form__password-wrap");
       const input = wrap ? wrap.querySelector("[data-auth-password]") : null;
@@ -62,7 +57,8 @@ function setupAuthScene(root) {
       input.type = nextType;
       passwordVisible = nextType === "text";
       syncToggleIcons(toggle, passwordVisible);
-      syncPasswordPeeking();
+      input.focus({ preventScroll: true });
+      activateFieldMode(input);
       applySceneState();
     });
   });
@@ -71,6 +67,17 @@ function setupAuthScene(root) {
     mouseX = event.clientX;
     mouseY = event.clientY;
     applySceneState();
+  }
+
+  function activateFieldMode(input) {
+    if (textInputs.includes(input)) {
+      activeFieldType = "text";
+    } else if (passwordInputs.includes(input)) {
+      activeFieldType = "password";
+    } else {
+      activeFieldType = null;
+    }
+    startTypingMode();
   }
 
   function startTypingMode() {
@@ -87,14 +94,18 @@ function setupAuthScene(root) {
   function stopTypingModeSoon() {
     window.setTimeout(() => {
       const focused = document.activeElement;
-      const typingFieldFocused = [...textInputs, ...passwordInputs].some(
-        input => input === focused,
-      );
-      if (!typingFieldFocused) {
+      const focusedTextInput = textInputs.find(input => input === focused) || null;
+      const focusedPasswordInput = passwordInputs.find(input => input === focused) || null;
+      if (focusedTextInput) {
+        activeFieldType = "text";
+      } else if (focusedPasswordInput) {
+        activeFieldType = "password";
+      } else {
+        activeFieldType = null;
         isTyping = false;
         lookAtEachOther = false;
-        applySceneState();
       }
+      applySceneState();
     }, 60);
   }
 
@@ -103,35 +114,6 @@ function setupAuthScene(root) {
       const wants = icon.getAttribute("data-auth-eye-icon") === (visible ? "hide" : "show");
       icon.classList.toggle("d-none", !wants);
     });
-  }
-
-  function syncPasswordPeeking() {
-    const hasPassword = passwordInputs.some(input => input.value.length > 0);
-    if (!(hasPassword && passwordVisible)) {
-      purplePeeking = false;
-      if (peekTimer) {
-        clearTimeout(peekTimer);
-        peekTimer = null;
-      }
-      applySceneState();
-      return;
-    }
-
-    if (peekTimer) return;
-    schedulePeek();
-  }
-
-  function schedulePeek() {
-    peekTimer = setTimeout(() => {
-      purplePeeking = true;
-      applySceneState();
-      setTimeout(() => {
-        purplePeeking = false;
-        applySceneState();
-        peekTimer = null;
-        syncPasswordPeeking();
-      }, 700);
-    }, Math.random() * 2600 + 1800);
   }
 
   function scheduleBlink(character, stateMap) {
@@ -152,9 +134,9 @@ function setupAuthScene(root) {
   }
 
   function applySceneState() {
-    // Purple leans + grows while typing OR while a hidden password has content
-    // (mirrors the template's `isTyping || (password && !showPassword)`).
-    const purpleLean = isTyping || (passwordHasValue && !passwordVisible);
+    const purpleLean = activeFieldType !== null && !passwordVisible;
+    const purpleTilt = activeFieldType === "password" && passwordVisible;
+    const groupGlance = purpleTilt;
     characters.forEach(character => {
       const type = character.getAttribute("data-auth-character");
       const face = character.querySelector("[data-auth-face]");
@@ -169,33 +151,42 @@ function setupAuthScene(root) {
       const bodySkew = clamp(-(mouseX - centerX) / 120, -6, 6);
 
       let transform = `translate(${faceX}px, ${faceY}px)`;
-      if (type === "purple" && passwordVisible) {
-        transform = purplePeeking
-          ? "translate(8px, 10px)"
-          : "translate(-6px, -6px)";
+      if (groupGlance) {
+        const glanceFaceTransforms = {
+          orange: "translate(6px, -2px)",
+          purple: "translate(-4px, -8px)",
+          charcoal: "translate(-5px, -2px)",
+          gold: "translate(-5px, -2px)",
+        };
+        transform = glanceFaceTransforms[type] || transform;
       } else if (type === "purple" && lookAtEachOther) {
         transform = "translate(10px, 6px)";
       }
       face.style.transform = transform;
 
       if (type === "purple") {
-        character.style.transform = passwordVisible
-          ? "skewX(0deg)"
+        character.style.transform = purpleTilt
+          ? "skewX(-4deg) translateX(18px) translateY(4px)"
           : purpleLean
             ? `skewX(${bodySkew - 10}deg) translateX(34px)`
             : `skewX(${bodySkew}deg)`;
         character.setAttribute("data-auth-grow", purpleLean ? "true" : "false");
       } else {
-        character.style.transform = passwordVisible ? "skewX(0deg)" : `skewX(${bodySkew}deg)`;
+        character.style.transform = groupGlance ? "skewX(0deg)" : `skewX(${bodySkew}deg)`;
       }
 
       pupils.forEach(pupil => {
         let offsetX = clamp((mouseX - centerX) / 50, -5, 5);
         let offsetY = clamp((mouseY - centerY) / 60, -5, 5);
 
-        if (passwordVisible) {
-          offsetX = type === "purple" ? (purplePeeking ? 4 : -4) : -5;
-          offsetY = type === "purple" ? (purplePeeking ? 5 : -4) : -4;
+        if (groupGlance) {
+          const glancePupilOffsets = {
+            orange: [4, -1],
+            purple: [-3, -4],
+            charcoal: [-4, -1],
+            gold: [-4, -1],
+          };
+          [offsetX, offsetY] = glancePupilOffsets[type] || [offsetX, offsetY];
         } else if (lookAtEachOther) {
           if (type === "purple") {
             offsetX = 3;

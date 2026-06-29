@@ -1,4 +1,4 @@
-import json
+﻿import json
 from datetime import datetime, timezone
 
 from flask_login import UserMixin
@@ -365,11 +365,8 @@ class AIAgentSetting(db.Model):
     __tablename__ = "ai_agent_settings"
 
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
-    agent_name = db.Column(db.String(64), nullable=False, default="AI助手")
+    agent_name = db.Column(db.String(64), nullable=False, default="Eyjafjalla")
     enabled = db.Column(db.Boolean, nullable=False, default=True)
-    facing = db.Column(db.String(8), nullable=False, default="right")
-    position_x = db.Column(db.Integer, nullable=False, default=24)
-    position_y = db.Column(db.Integer, nullable=False, default=24)
     api_url = db.Column(db.String(512))
     _api_key = db.Column("api_key", db.Text)
     model = db.Column(db.String(64))
@@ -544,3 +541,4 @@ def _normalize_category_timestamps(_mapper, _connection, target) -> None:
 @event.listens_for(File, "before_update")
 def _normalize_file_timestamps(_mapper, _connection, target) -> None:
     target.uploaded_at = _utc_naive(target.uploaded_at)
+

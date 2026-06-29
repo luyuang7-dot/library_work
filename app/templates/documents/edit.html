@@ -8,8 +8,92 @@
   </button>
 </div>
 
+<style>
+  #pdf-split-layout {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+  #edit-form-col {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  #pdf-resizer {
+    width: 12px;
+    flex: 0 0 12px;
+    cursor: col-resize;
+    position: relative;
+    touch-action: none;
+    user-select: none;
+  }
+  #pdf-resizer::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 5px;
+    width: 2px;
+    border-radius: 999px;
+    background: rgba(13, 110, 253, 0.35);
+  }
+  #pdf-resizer:hover::before,
+  #pdf-resizer.is-dragging::before {
+    background: rgba(13, 110, 253, 0.75);
+  }
+  #recognize-pane {
+    min-width: 320px;
+  }
+  #recognize-pane > .position-sticky {
+    width: 100%;
+  }
+  #rp-markdown-render {
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+  #rp-markdown-render h1,
+  #rp-markdown-render h2,
+  #rp-markdown-render h3 {
+    line-height: 1.25;
+    margin-top: 0;
+    margin-bottom: 0.85rem;
+    word-break: break-word;
+  }
+  #rp-markdown-render h1 {
+    font-size: 1.55rem;
+  }
+  #rp-markdown-render h2 {
+    font-size: 1.2rem;
+  }
+  #rp-markdown-render h3 {
+    font-size: 1.05rem;
+  }
+  #rp-markdown-render p,
+  #rp-markdown-render ul,
+  #rp-markdown-render ol,
+  #rp-markdown-render blockquote,
+  #rp-markdown-render pre {
+    margin-bottom: 0.8rem;
+  }
+  #rp-markdown-render pre {
+    font-size: 0.85rem;
+  }
+  @media (max-width: 991.98px) {
+    #pdf-split-layout {
+      display: block;
+    }
+    #pdf-resizer {
+      display: none;
+    }
+    #recognize-pane {
+      min-width: 0;
+    }
+  }
+</style>
+
 <div class="row g-3">
-  <div class="col-lg-12" id="edit-form-col">
+  <div class="col-12">
+    <div id="pdf-split-layout">
+      <div id="edit-form-col">
     <input type="file" id="recognize-file-hidden" accept="application/pdf" class="d-none">
 
     <form method="post" enctype="multipart/form-data" class="row g-3">
@@ -163,10 +247,12 @@
 
     <datalist id="dl-sources"></datalist>
     <datalist id="dl-publishers"></datalist>
-  </div>
+      </div>
 
-  <div class="col-lg-4 d-none" id="recognize-pane">
-    <div class="position-sticky" style="top: 76px;">
+      <div id="pdf-resizer" class="d-none d-lg-block" aria-hidden="true" title="拖动调整左右栏宽度"></div>
+
+      <div class="d-none" id="recognize-pane">
+        <div class="position-sticky" style="top: 76px;">
       <div class="card">
         <div class="card-body">
           <div id="rp-upload">
@@ -202,7 +288,16 @@
               <button type="button" class="btn btn-sm btn-outline-success" id="rp-btn-download">下载 Markdown</button>
               <button type="button" class="btn btn-sm btn-outline-secondary" id="rp-btn-new-pdf">重新选择</button>
             </div>
-            <pre id="rp-markdown" class="small bg-body-tertiary border rounded p-2 mb-0" style="max-height: calc(100vh - 320px); overflow: auto; white-space: pre-wrap;"></pre>
+            <ul class="nav nav-pills nav-fill gap-2 mb-2" id="rp-view-tabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link active" id="rp-tab-render" data-rp-view="render">渲染预览</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link" id="rp-tab-raw" data-rp-view="raw">Markdown 原文</button>
+              </li>
+            </ul>
+            <div id="rp-markdown-render" class="border rounded bg-body-tertiary p-3 overflow-auto" style="max-height: calc(100vh - 320px);"></div>
+            <pre id="rp-markdown" class="small bg-body-tertiary border rounded p-2 mb-0 d-none" style="max-height: calc(100vh - 320px); overflow: auto; white-space: pre-wrap;"></pre>
           </div>
 
           <div id="rp-error" class="d-none">
@@ -211,10 +306,12 @@
           </div>
         </div>
       </div>
+        </div>
+      </div>
     </div>
-  </div>
 </div>
 
+<script src="{{ url_for('static', filename='vendor/marked.min.js') }}"></script>
 <script>
 (function () {
   const sourcesUrl = '{{ url_for("library.api_sources") }}';
@@ -364,6 +461,8 @@
     const toggleButton = document.getElementById("btn-recognize-toggle");
     if (!toggleButton) return;
 
+    const splitLayout = document.getElementById("pdf-split-layout");
+    const resizer = document.getElementById("pdf-resizer");
     const pane = document.getElementById("recognize-pane");
     const formCol = document.getElementById("edit-form-col");
     const fileInput = document.getElementById("recognize-file-hidden");
@@ -379,11 +478,52 @@
     let lastMarkdown = "";
     let lastSuggested = null;
     let lastFilename = "";
+    const splitStorageKey = "documents_edit_pdf_split_ratio";
+    const desktopMedia = window.matchMedia("(min-width: 992px)");
+
+    function clamp(value, low, high) {
+      return Math.min(Math.max(value, low), high);
+    }
+
+    function saveSplitRatio(ratio) {
+      try {
+        window.localStorage.setItem(splitStorageKey, String(ratio));
+      } catch (error) {}
+    }
+
+    function readSplitRatio() {
+      try {
+        const raw = Number(window.localStorage.getItem(splitStorageKey));
+        if (Number.isFinite(raw)) {
+          return clamp(raw, 0.35, 0.75);
+        }
+      } catch (error) {}
+      return 0.58;
+    }
+
+    function applySplitRatio(ratio) {
+      const next = clamp(ratio, 0.35, 0.75);
+      if (desktopMedia.matches && !pane.classList.contains("d-none")) {
+        formCol.style.flex = `0 0 calc((100% - 12px) * ${next})`;
+        pane.style.flex = `1 1 calc((100% - 12px) * ${1 - next})`;
+      } else {
+        formCol.style.flex = "";
+        pane.style.flex = "";
+      }
+      saveSplitRatio(next);
+      return next;
+    }
 
     function setPaneVisible(visible) {
       pane.classList.toggle("d-none", !visible);
-      formCol.classList.toggle("col-lg-12", !visible);
-      formCol.classList.toggle("col-lg-8", visible);
+      resizer.classList.toggle("d-none", !visible || !desktopMedia.matches);
+      splitLayout.classList.toggle("split-active", visible);
+      if (!visible) {
+        formCol.style.flex = "";
+        pane.style.flex = "";
+        return;
+      }
+      applySplitRatio(readSplitRatio());
     }
 
     function setState(stateName) {
@@ -501,11 +641,120 @@
       URL.revokeObjectURL(url);
     });
 
+    const markdownRenderEl = document.getElementById("rp-markdown-render");
+    const markdownRawEl = document.getElementById("rp-markdown");
+    const viewTabs = document.getElementById("rp-view-tabs");
+    const viewButtons = viewTabs ? Array.from(viewTabs.querySelectorAll("[data-rp-view]")) : [];
+    let currentView = "render";
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function renderMarkdownPreview(markdown) {
+      markdownRawEl.textContent = markdown || "";
+      if (!markdown) {
+        markdownRenderEl.innerHTML = '<div class="text-muted">暂无 Markdown 内容。</div>';
+        return;
+      }
+      try {
+        if (window.marked && typeof window.marked.parse === "function") {
+          markdownRenderEl.innerHTML = window.marked.parse(markdown);
+        } else {
+          markdownRenderEl.innerHTML = `<pre class="mb-0" style="white-space: pre-wrap;">${escapeHtml(markdown)}</pre>`;
+        }
+      } catch (error) {
+        markdownRenderEl.innerHTML = `<pre class="mb-0" style="white-space: pre-wrap;">${escapeHtml(markdown)}</pre>`;
+      }
+    }
+
+    function setView(view) {
+      currentView = view === "raw" ? "raw" : "render";
+      const isRaw = currentView === "raw";
+      markdownRenderEl.classList.toggle("d-none", isRaw);
+      markdownRawEl.classList.toggle("d-none", !isRaw);
+      viewButtons.forEach((button) => {
+        const active = button.dataset.rpView === currentView;
+        button.classList.toggle("active", active);
+      });
+    }
+
+    function showResultPreview() {
+      filenameEl.textContent = lastFilename;
+      charcountEl.textContent = `Markdown 长度：${lastMarkdown.length.toLocaleString()} 个字符`;
+      renderMarkdownPreview(lastMarkdown);
+      setView(currentView);
+      setState("result");
+    }
+
+    showResult = showResultPreview;
+
+    viewButtons.forEach((button) => {
+      button.addEventListener("click", () => setView(button.dataset.rpView));
+    });
+
+    let drag = null;
+    if (resizer) {
+      resizer.addEventListener("pointerdown", (event) => {
+        if (!desktopMedia.matches || pane.classList.contains("d-none")) return;
+        if (event.button !== undefined && event.button !== 0) return;
+        const rect = splitLayout.getBoundingClientRect();
+        drag = {
+          pointerId: event.pointerId,
+          left: rect.left,
+          width: rect.width,
+        };
+      resizer.classList.add("is-dragging");
+      resizer.setPointerCapture(event.pointerId);
+      event.preventDefault();
+      });
+
+      resizer.addEventListener("pointermove", (event) => {
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        const usableWidth = Math.max(1, drag.width - 12);
+        const ratio = clamp((event.clientX - drag.left) / usableWidth, 0.35, 0.75);
+        applySplitRatio(ratio);
+      });
+
+      function stopResize(event) {
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        try {
+          resizer.releasePointerCapture(event.pointerId);
+        } catch (error) {}
+        resizer.classList.remove("is-dragging");
+        drag = null;
+      }
+
+      resizer.addEventListener("pointerup", stopResize);
+      resizer.addEventListener("pointercancel", stopResize);
+    }
+
+    function handleViewportChange() {
+      resizer.classList.toggle("d-none", pane.classList.contains("d-none") || !desktopMedia.matches);
+      applySplitRatio(readSplitRatio());
+    }
+
+    if (typeof desktopMedia.addEventListener === "function") {
+      desktopMedia.addEventListener("change", handleViewportChange);
+    } else if (typeof desktopMedia.addListener === "function") {
+      desktopMedia.addListener(handleViewportChange);
+    }
+
+    applySplitRatio(readSplitRatio());
+
     toggleButton.addEventListener("click", () => {
       const visible = pane.classList.contains("d-none");
       setPaneVisible(visible);
       if (visible) {
         setState(lastMarkdown ? "result" : "upload");
+        if (lastMarkdown) {
+          renderMarkdownPreview(lastMarkdown);
+          setView(currentView);
+        }
       }
     });
   })();

@@ -1,5 +1,6 @@
 import logging
 import os
+import threading
 import time
 from pathlib import Path
 from uuid import uuid4
@@ -22,6 +23,50 @@ from .extensions import csrf, db, limiter, login_manager
 
 class DatabaseMigrationRequired(RuntimeError):
     """Raised when the configured database is not migrated to Alembic head."""
+
+
+class LocalBrowserLifecycle:
+    """Tracks active local browser pages for the dev-only auto-shutdown flow."""
+
+    def __init__(self, idle_timeout_seconds: float = 8.0) -> None:
+        self.idle_timeout_seconds = max(float(idle_timeout_seconds), 1.0)
+        self._lock = threading.Lock()
+        self._clients: dict[str, float] = {}
+        self._ever_seen_client = False
+
+    def touch(self, client_id: str, *, now: float | None = None) -> int:
+        current = time.time() if now is None else float(now)
+        with self._lock:
+            self._clients[client_id] = current
+            self._ever_seen_client = True
+            self._prune_locked(current)
+            return len(self._clients)
+
+    def discard(self, client_id: str) -> int:
+        with self._lock:
+            self._clients.pop(client_id, None)
+            self._prune_locked(time.time())
+            return len(self._clients)
+
+    def has_active_clients(self, *, now: float | None = None) -> bool:
+        current = time.time() if now is None else float(now)
+        with self._lock:
+            self._prune_locked(current)
+            return bool(self._clients)
+
+    @property
+    def ever_seen_client(self) -> bool:
+        with self._lock:
+            return self._ever_seen_client
+
+    def _prune_locked(self, now: float) -> None:
+        stale = [
+            client_id
+            for client_id, seen_at in self._clients.items()
+            if now - seen_at > self.idle_timeout_seconds
+        ]
+        for client_id in stale:
+            self._clients.pop(client_id, None)
 
 
 def register_cli_commands(app: Flask) -> None:
@@ -126,6 +171,9 @@ def create_app(env: str = "dev", *, skip_db_checks: bool = False) -> Flask:
     login_manager.init_app(app)
     limiter.init_app(app)
     register_cli_commands(app)
+    app.extensions["local_browser_lifecycle"] = LocalBrowserLifecycle(
+        app.config.get("LOCAL_BROWSER_IDLE_TIMEOUT_SECONDS", 8.0)
+    )
 
     from . import models  # noqa: F401
 
@@ -170,6 +218,28 @@ def create_app(env: str = "dev", *, skip_db_checks: bool = False) -> Flask:
         db.session.execute(text("SELECT 1"))
         return jsonify(ok=True, status="healthy", version=app.config["APP_VERSION"])
 
+    @app.post("/__local_dev__/browser-session")
+    @csrf.exempt
+    def local_dev_browser_session():
+        if not app.config.get("ENABLE_LOCAL_BROWSER_LIFECYCLE"):
+            return jsonify(ok=False, error="Local browser lifecycle is disabled."), 404
+
+        payload = request.get_json(silent=True) or {}
+        client_id = str(payload.get("client_id") or "").strip()
+        if not client_id:
+            return jsonify(ok=False, error="client_id is required."), 400
+
+        lifecycle = app.extensions.get("local_browser_lifecycle")
+        if lifecycle is None:
+            return jsonify(ok=False, error="Local browser lifecycle is unavailable."), 503
+
+        event = str(payload.get("event") or "ping").strip().lower()
+        if event == "close":
+            active_count = lifecycle.discard(client_id)
+        else:
+            active_count = lifecycle.touch(client_id)
+        return jsonify(ok=True, active_clients=active_count)
+
     @app.before_request
     def attach_request_context():
         g.request_started_at = time.perf_counter()
@@ -182,6 +252,7 @@ def create_app(env: str = "dev", *, skip_db_checks: bool = False) -> Flask:
         return {
             "app_name": "个人文献库",
             "app_version": app.config["APP_VERSION"],
+            "local_browser_session_url": app.config.get("LOCAL_BROWSER_SESSION_URL", ""),
             "csrf_token": generate_csrf,
             "csrf_input": lambda: Markup(
                 f'<input type="hidden" name="csrf_token" value="{generate_csrf()}">'
