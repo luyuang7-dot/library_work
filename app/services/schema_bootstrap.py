@@ -1,4 +1,4 @@
-"""Idempotent startup schema fixes for legacy databases."""
+﻿"""Idempotent startup schema fixes for legacy databases."""
 
 from __future__ import annotations
 
@@ -16,7 +16,8 @@ _AI_AGENT_SETTING_NEW_COLUMNS = {
     "user_preference": "VARCHAR(500) NOT NULL DEFAULT ''",
 }
 
-_AI_AGENT_SETTING_DROP_COLUMNS = ("tone", "role", "personality")
+_AI_AGENT_SETTING_DROP_COLUMNS = ("tone", "role", "personality", "facing", "position_x", "position_y")
+_LEGACY_AGENT_NAME_VALUES = ("AI??", "AI鍔╂墜", "AI閸斺晜澧?", "艾雅法拉")
 
 _AI_AGENT_JOURNAL_NEW_COLUMNS = {
     "archived_at": "DATETIME NULL",
@@ -123,11 +124,21 @@ def ensure_ai_agent_settings_rows(session: Session) -> None:
 
     session.execute(
         text(
-            "INSERT INTO ai_agent_settings (user_id, agent_name, enabled, facing, position_x, position_y, user_preference, daily_rollup_minute, created_at, updated_at) "
-            "SELECT u.id, 'AI助手', 1, 'right', 24, 24, '', 1439, NOW(), NOW() "
+            "INSERT INTO ai_agent_settings (user_id, agent_name, enabled, user_preference, daily_rollup_minute, created_at, updated_at) "
+            "SELECT u.id, 'Eyjafjalla', 1, '', 1439, NOW(), NOW() "
             "FROM users u "
             "LEFT JOIN ai_agent_settings s ON s.user_id = u.id "
             "WHERE s.user_id IS NULL"
         )
     )
     session.commit()
+
+    session.execute(
+        text(
+            "UPDATE ai_agent_settings "
+            "SET agent_name = 'Eyjafjalla' "
+            "WHERE agent_name IN ('AI??', 'AI鍔╂墜', 'AI閸斺晜澧?', '艾雅法拉') OR agent_name IS NULL OR agent_name = ''"
+        )
+    )
+    session.commit()
+

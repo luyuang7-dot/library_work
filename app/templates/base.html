@@ -30,7 +30,7 @@
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico', v=static_v) }}" sizes="any">
   <link href="{{ url_for('static', filename='css/app.css', v=static_v) }}" rel="stylesheet">
 </head>
-<body>
+<body data-browser-session-url="{{ local_browser_session_url or '' }}">
 <nav class="navbar navbar-expand-md navbar-dark bg-dark sticky-top">
   <div class="container-fluid">
     <div class="navbar-shell">
@@ -123,9 +123,6 @@
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="关闭"></button>
   </div>
   <div class="offcanvas-body nav-drawer__body">
-    <p class="nav-drawer__copy">
-      这里聚焦课程项目所需的核心流程：文献记录、PDF 识别、检索、分类、BibTeX 导入与活动日志。
-    </p>
     <div class="nav-drawer__grid">
       <a class="nav-drawer__link nav-drawer__link--primary" href="{{ url_for('documents.list_documents') }}">
         <i class="bi bi-journal-text"></i>
@@ -180,11 +177,16 @@
 </main>
 
 {% if current_user.is_authenticated %}
-<div id="ai-agent-root" class="ai-agent-root" aria-hidden="true"
+<div id="ai-assistant-root"
+     class="ai-assistant-root"
+     aria-hidden="true"
      data-state-url="{{ url_for('ai_agent.api_state') }}"
      data-activity-url="{{ url_for('ai_agent.api_activity') }}"
-     data-idle-src="{{ url_for('static', filename='img/ai_agent_idle.png', v=static_v) }}"
-     data-journaling-src="{{ url_for('static', filename='img/ai_agent_journaling.png', v=static_v) }}">
+     data-rollup-url="{{ url_for('ai_agent.rollup_run') }}"
+     data-journals-url="{{ url_for('journals.index') }}"
+     data-library-url="{{ url_for('documents.list_documents') }}"
+    data-search-url="{{ url_for('documents.search') }}"
+    data-avatar-src="{{ url_for('static', filename='img/ai_assistant_sleepy.gif', v=static_v) }}">
 </div>
 {% endif %}
 
@@ -194,7 +196,7 @@
 
 <script src="{{ url_for('static', filename='vendor/bootstrap/bootstrap.bundle.min.js', v=static_v) }}"></script>
 {% if current_user.is_authenticated %}
-<script src="{{ url_for('static', filename='js/ai_agent.js', v=static_v) }}"></script>
+<script src="{{ url_for('static', filename='js/ai_assistant.js', v=static_v) }}"></script>
 <script src="{{ url_for('static', filename='js/fab_menu.js', v=static_v) }}"></script>
 {% endif %}
 <script src="{{ url_for('static', filename='js/app.js', v=static_v) }}"></script>

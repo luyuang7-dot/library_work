@@ -3,24 +3,27 @@
 {% block content %}
 <div class="row g-3">
   <aside class="col-md-3">
-    <div class="card shadow-sm">
-      <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="card shadow-sm category-rail-card">
+      <div class="card-header d-flex justify-content-between align-items-center category-rail-card__header">
         <span><i class="bi bi-folder me-1"></i> 分类</span>
-        <a href="{{ url_for('categories.list_categories') }}" class="btn btn-sm btn-outline-primary">管理</a>
+        <a href="{{ url_for('categories.list_categories') }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">管理</a>
       </div>
-      <div class="list-group list-group-flush">
-        <a class="list-group-item list-group-item-action {% if not active_category %}active{% endif %}" href="{{ url_for('documents.list_documents') }}">
-          全部文献
-        </a>
-        {% for category in categories %}
-        <a
-          class="list-group-item list-group-item-action {% if active_category == category.id %}active{% endif %}"
-          href="{{ url_for('documents.list_documents', category=category.id) }}"
-          style="padding-left: {{ 1.0 + ((category.depth or 0) * 1.1) }}rem;"
-        >
-          {{ category.name }}
-        </a>
-        {% endfor %}
+      <div class="card-body p-2">
+        <div class="category-rail">
+          <a class="category-rail__pill category-rail__pill--all {% if not active_category %}is-active{% endif %}" href="{{ url_for('documents.list_documents') }}">
+            <span class="category-rail__label">全部文献</span>
+            <span class="category-rail__meta">{{ pagination.total }}</span>
+          </a>
+          {% for category in categories %}
+          <a
+            class="category-rail__pill category-rail__pill--level-{{ category.depth or 0 }} {% if active_category == category.id %}is-active{% endif %}"
+            href="{{ url_for('documents.list_documents', category=category.id) }}"
+            style="margin-left: {{ (category.depth or 0) * 0.9 }}rem;"
+          >
+            <span class="category-rail__label">{{ category.name }}</span>
+          </a>
+          {% endfor %}
+        </div>
       </div>
     </div>
   </aside>
@@ -173,6 +176,129 @@
     {% endif %}
   </main>
 </div>
+
+<style>
+  .category-rail-card {
+    border: 1px solid color-mix(in srgb, var(--bs-border-color) 76%, transparent);
+    border-radius: 1.2rem;
+    overflow: hidden;
+    background:
+      radial-gradient(900px 160px at 20% 0%, color-mix(in srgb, var(--bs-primary) 14%, transparent), transparent 70%),
+      linear-gradient(180deg, color-mix(in srgb, var(--bs-body-bg) 94%, var(--bs-secondary-bg)) 0%, var(--bs-body-bg) 100%);
+  }
+  .category-rail-card__header {
+    background: color-mix(in srgb, var(--bs-body-bg) 84%, var(--bs-secondary-bg));
+  }
+  .category-rail {
+    display: grid;
+    gap: .55rem;
+  }
+  .category-rail__pill {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    width: 100%;
+    min-height: 3rem;
+    padding: .7rem .9rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--bs-border-color) 76%, transparent);
+    background: color-mix(in srgb, var(--bs-body-bg) 74%, var(--bs-secondary-bg));
+    color: var(--bs-body-color);
+    text-decoration: none;
+    transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease, border-color .18s ease;
+  }
+  .category-rail__pill:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, .08);
+    color: var(--bs-body-color);
+  }
+  .category-rail__pill.is-active {
+    background: linear-gradient(135deg, #1f2937 0%, #0f172a 100%);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, .18);
+  }
+  .category-rail__pill--all {
+    background: linear-gradient(135deg, rgba(59, 130, 246, .14), rgba(37, 99, 235, .08));
+    font-weight: 700;
+  }
+  .category-rail__pill--level-0,
+  .category-rail__pill--level-1,
+  .category-rail__pill--level-2,
+  .category-rail__pill--level-3,
+  .category-rail__pill--level-4,
+  .category-rail__pill--level-5 {
+    justify-content: flex-start;
+  }
+  .category-rail__pill--level-0 { border-left: 6px solid rgba(16, 185, 129, .7); }
+  .category-rail__pill--level-1 { border-left: 6px solid rgba(14, 165, 233, .75); }
+  .category-rail__pill--level-2 { border-left: 6px solid rgba(245, 158, 11, .78); }
+  .category-rail__pill--level-3,
+  .category-rail__pill--level-4,
+  .category-rail__pill--level-5 { border-left: 6px solid rgba(168, 85, 247, .76); }
+  .category-rail__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 650;
+  }
+  .category-rail__meta {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.25rem;
+    height: 1.45rem;
+    padding: 0 .5rem;
+    border-radius: 999px;
+    font-size: .76rem;
+    background: color-mix(in srgb, var(--bs-body-bg) 66%, var(--bs-secondary-bg));
+    color: var(--bs-secondary-color);
+  }
+  .category-rail__pill.is-active .category-rail__meta {
+    background: rgba(255,255,255,.16);
+    color: #fff;
+  }
+  [data-theme="dark"] .category-rail-card {
+    background:
+      radial-gradient(900px 160px at 20% 0%, rgba(96, 165, 250, .28), transparent 70%),
+      linear-gradient(180deg, rgba(17, 24, 39, .98) 0%, rgba(15, 23, 42, 1) 100%);
+  }
+  [data-theme="dark"] .category-rail-card__header {
+    background: rgba(15, 23, 42, .82);
+  }
+  [data-theme="dark"] .category-rail__pill {
+    background: linear-gradient(135deg, rgba(30, 41, 59, .94), rgba(15, 23, 42, .9));
+    border-color: rgba(96, 165, 250, .28);
+    color: #f8fafc;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+  }
+  [data-theme="dark"] .category-rail__pill:hover {
+    background: linear-gradient(135deg, rgba(37, 99, 235, .34), rgba(30, 41, 59, .95));
+    border-color: rgba(125, 211, 252, .48);
+    box-shadow: 0 12px 26px rgba(2, 6, 23, .36);
+  }
+  [data-theme="dark"] .category-rail__pill--all {
+    background: linear-gradient(135deg, rgba(37, 99, 235, .5), rgba(56, 189, 248, .28));
+    border-color: rgba(125, 211, 252, .52);
+  }
+  [data-theme="dark"] .category-rail__pill--level-0 {
+    border-left-color: rgba(52, 211, 153, .96);
+  }
+  [data-theme="dark"] .category-rail__pill--level-1 {
+    border-left-color: rgba(56, 189, 248, .98);
+  }
+  [data-theme="dark"] .category-rail__pill--level-2 {
+    border-left-color: rgba(251, 191, 36, .98);
+  }
+  [data-theme="dark"] .category-rail__pill--level-3,
+  [data-theme="dark"] .category-rail__pill--level-4,
+  [data-theme="dark"] .category-rail__pill--level-5 {
+    border-left-color: rgba(196, 181, 253, .96);
+  }
+</style>
 
 <script>
 (function () {

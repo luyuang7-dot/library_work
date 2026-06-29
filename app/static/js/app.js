@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   setupCsrfProtection();
+  setupLocalBrowserLifecycle();
 
   setTimeout(() => {
     document.querySelectorAll(".alert.fade.show").forEach((alertEl) => {
@@ -287,6 +288,69 @@ function setupCursorGlow() {
   window.addEventListener("blur", () => {
     glow.classList.remove("is-visible", "is-hovering", "is-pressed");
   });
+}
+
+function setupLocalBrowserLifecycle() {
+  const bodyUrl = (document.body.dataset.browserSessionUrl || "").trim();
+  const root = document.getElementById("ai-assistant-root");
+  const sessionUrl = (root?.dataset.browserSessionUrl || bodyUrl).trim();
+  if (!sessionUrl) return;
+
+  const clientKey = "local-browser-session-id";
+  let clientId = "";
+
+  try {
+    clientId = sessionStorage.getItem(clientKey) || "";
+    if (!clientId) {
+      clientId = crypto.randomUUID();
+      sessionStorage.setItem(clientKey, clientId);
+    }
+  } catch (error) {
+    clientId = `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  const pingBody = JSON.stringify({ client_id: clientId, event: "ping" });
+  const closeBody = JSON.stringify({ client_id: clientId, event: "close" });
+  let pingTimer = null;
+  let stopping = false;
+
+  function sendBeacon(payload) {
+    if (navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: "application/json" });
+      if (navigator.sendBeacon(sessionUrl, blob)) return true;
+    }
+    return false;
+  }
+
+  async function ping() {
+    if (stopping) return;
+    try {
+      await fetch(sessionUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: pingBody,
+        keepalive: true,
+      });
+    } catch (error) {}
+  }
+
+  function schedulePing() {
+    if (pingTimer) clearInterval(pingTimer);
+    pingTimer = setInterval(ping, 3000);
+  }
+
+  function stop() {
+    if (stopping) return;
+    stopping = true;
+    if (pingTimer) clearInterval(pingTimer);
+    sendBeacon(closeBody);
+  }
+
+  ping();
+  schedulePing();
+
+  window.addEventListener("pagehide", stop, { once: true });
+  window.addEventListener("beforeunload", stop, { once: true });
 }
 
 function ensureCursorGlowElement() {

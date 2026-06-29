@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import ipaddress
 import json
@@ -13,14 +13,19 @@ from flask import current_app, has_app_context
 from ..extensions import db
 from ..models import AIAgentActivity, AIAgentJournal, AIAgentSetting
 
-DEFAULT_AGENT_NAME = "AI助手"
-DEFAULT_POSITION_X = 24
-DEFAULT_POSITION_Y = 24
+DEFAULT_AGENT_NAME = "Eyjafjalla"
 DEFAULT_DAILY_ROLLUP_MINUTE = 23 * 60 + 59
 DEFAULT_DAILY_PRUNE_MINUTE = 12 * 60
 DEFAULT_DAILY_PRUNE_WINDOW_MINUTES = 60
 WEEKLY_ROLLUP_DAYS = 7
 ACTIVITY_FETCH_LIMIT = 500
+_LEGACY_AGENT_NAME_VALUES = {
+    "AI??",
+    "AI鍔╂墜",
+    "AI閸斺晜澧?",
+    "鑹鹃泤娉曟媺",
+    "艾雅法拉",
+}
 
 class AIAgentError(Exception):
     """Raised when the configured AI agent service cannot generate a journal."""
@@ -103,6 +108,13 @@ def _normalize_user_preference(value: str | None) -> str:
     return (value or "").strip()[:500]
 
 
+def _normalize_agent_name(value: str | None) -> str:
+    name = (value or "").strip()[:64]
+    if not name or name in _LEGACY_AGENT_NAME_VALUES:
+        return DEFAULT_AGENT_NAME
+    return name
+
+
 def apply_agent_profile_updates(setting: AIAgentSetting, source) -> None:
     if "user_preference" in source:
         setting.user_preference = _normalize_user_preference(source.get("user_preference"))
@@ -116,6 +128,18 @@ def _serialize_setting_profile(setting: AIAgentSetting) -> dict:
     }
 
 
+def serialize_assistant_state(setting: AIAgentSetting) -> dict:
+    profile = _serialize_setting_profile(setting)
+    return {
+        "agent_name": _normalize_agent_name(getattr(setting, "agent_name", None)),
+        "enabled": bool(getattr(setting, "enabled", True)),
+        "daily_rollup_time": format_daily_rollup_time(DEFAULT_DAILY_ROLLUP_MINUTE),
+        "daily_prune_time": format_fixed_prune_time(),
+        "last_rollup_at": _as_local(setting.last_rollup_at).isoformat() if setting.last_rollup_at else None,
+        **profile,
+    }
+
+
 def get_or_create_setting(user_id: int, commit: bool = True) -> AIAgentSetting:
     setting = db.session.get(AIAgentSetting, user_id)
     needs_save = False
@@ -124,9 +148,6 @@ def get_or_create_setting(user_id: int, commit: bool = True) -> AIAgentSetting:
             user_id=user_id,
             agent_name=DEFAULT_AGENT_NAME,
             enabled=True,
-            facing="right",
-            position_x=DEFAULT_POSITION_X,
-            position_y=DEFAULT_POSITION_Y,
             user_preference="",
             daily_rollup_minute=DEFAULT_DAILY_ROLLUP_MINUTE,
         )
@@ -134,17 +155,9 @@ def get_or_create_setting(user_id: int, commit: bool = True) -> AIAgentSetting:
         needs_save = True
     elif setting.migrate_api_key_to_encrypted():
         needs_save = True
-    if not getattr(setting, "agent_name", None):
-        setting.agent_name = DEFAULT_AGENT_NAME
-        needs_save = True
-    if getattr(setting, "facing", None) not in {"left", "right"}:
-        setting.facing = "right"
-        needs_save = True
-    if getattr(setting, "position_x", None) is None:
-        setting.position_x = DEFAULT_POSITION_X
-        needs_save = True
-    if getattr(setting, "position_y", None) is None:
-        setting.position_y = DEFAULT_POSITION_Y
+    normalized_name = _normalize_agent_name(getattr(setting, "agent_name", None))
+    if getattr(setting, "agent_name", None) != normalized_name:
+        setting.agent_name = normalized_name
         needs_save = True
     if setting.daily_rollup_minute != DEFAULT_DAILY_ROLLUP_MINUTE:
         setting.daily_rollup_minute = DEFAULT_DAILY_ROLLUP_MINUTE
@@ -161,24 +174,6 @@ def get_or_create_setting(user_id: int, commit: bool = True) -> AIAgentSetting:
         else:
             db.session.flush()
     return setting
-
-
-def serialize_setting(setting: AIAgentSetting) -> dict:
-    profile = _serialize_setting_profile(setting)
-    return {
-        "agent_name": setting.agent_name or DEFAULT_AGENT_NAME,
-        "enabled": bool(setting.enabled),
-        "facing": setting.facing if setting.facing in {"left", "right"} else "right",
-        "position_x": int(setting.position_x or DEFAULT_POSITION_X),
-        "position_y": int(setting.position_y or DEFAULT_POSITION_Y),
-        "api_url": setting.api_url or "",
-        "api_key_configured": bool(setting.api_key),
-        "model": setting.model or "",
-        **profile,
-        "daily_rollup_time": format_daily_rollup_time(DEFAULT_DAILY_ROLLUP_MINUTE),
-        "daily_prune_time": format_fixed_prune_time(),
-        "last_rollup_at": _as_local(setting.last_rollup_at).isoformat() if setting.last_rollup_at else None,
-    }
 
 
 def sanitize_metadata(metadata) -> dict:
@@ -259,8 +254,8 @@ def activities_in_window(user_id: int, start: datetime, end: datetime) -> list[A
 
 def _journal_title(period: str, start_date: date, end_date: date) -> str:
     if period == "daily":
-        return f"{start_date.isoformat()} 日志"
-    return f"{start_date.isoformat()} ~ {end_date.isoformat()} 周记"
+        return f"{start_date.isoformat()} 鏃ュ織"
+    return f"{start_date.isoformat()} ~ {end_date.isoformat()} 鍛ㄨ"
 
 
 def save_generated_journal(
@@ -354,7 +349,7 @@ def activity_to_dict(activity: AIAgentActivity) -> dict:
 
 def build_activity_summary(activities: list[AIAgentActivity]) -> str:
     if not activities:
-        return "暂无记录到的使用活动。"
+        return "No recorded activity yet."
     lines = []
     for activity in activities:
         created_at = _as_local(activity.created_at)
@@ -365,7 +360,7 @@ def build_activity_summary(activities: list[AIAgentActivity]) -> str:
 
 def _build_journal_digest(journals: list[AIAgentJournal]) -> str:
     if not journals:
-        return "暂无可用的历史日志。"
+        return "No archived journals are available yet."
     blocks = []
     for journal in journals:
         blocks.append(
@@ -493,21 +488,22 @@ def _build_messages(
     profile = _serialize_setting_profile(setting)
     user_preference = profile["user_preference"]
     preference_block = (
-        f"用户额外偏好：{user_preference}。请在不偏离事实的前提下尽量满足。\n"
+        f"User preference: {user_preference}. Follow it when it does not conflict with facts.\n"
         if user_preference
         else ""
     )
     system_prompt = (
-        f"你是用户在 Personal Library 文献管理系统里的桌面伙伴，名字叫{agent_name}。"
+        f"You are the user's desktop companion inside Personal Library. Your name is {agent_name}.\n"
         f"{preference_block}"
-        "请用第一人称写中文日志，要求简洁、有条理、基于事实、使用 Markdown，并在结尾给一句简短鼓励。"
+        "Write a concise, well-structured Chinese journal in first person. Use Markdown when helpful, "
+        "stay factual, and end with one short encouraging sentence."
     )
 
     if period == "week":
         history_text = _build_journal_digest(source_journals or [])
         user_prompt = (
-            "\u4e0b\u9762\u662f\u7528\u6237\u6700\u8fd1\u4e03\u5929\u5df2\u7ecf\u751f\u6210\u7684\u65e5\u5fd7\uff0c\u8bf7\u57fa\u4e8e\u8fd9\u4e9b\u65e5\u5fd7\u5199\u4e00\u7bc7\u5468\u8bb0\u3002"
-            "\u8981\u6c42\u91cd\u70b9\u6982\u62ec\u9636\u6bb5\u6027\u5de5\u4f5c\u3001\u5e38\u89c1\u64cd\u4f5c\u65b9\u5411\u548c\u6574\u4f53\u8fdb\u5c55\u3002\n\n"
+            "Below are the user's journals from the last seven days. Write a weekly summary based on them.\n"
+            "Focus on stage-by-stage work, common action patterns, and overall progress.\n\n"
             f"{history_text}"
         )
     else:
@@ -515,19 +511,19 @@ def _build_messages(
         previous_block = ""
         if previous_daily_content:
             previous_block = (
-                "\u4e0b\u9762\u662f\u4eca\u5929\u6b64\u524d\u5df2\u7ecf\u751f\u6210\u7684\u65e5\u5fd7\uff0c\u8bf7\u5728\u4fdd\u7559\u5df2\u6709\u91cd\u70b9\u7684\u57fa\u7840\u4e0a\uff0c"
-                "\u628a\u65b0\u65f6\u95f4\u6bb5\u5185\u7684\u64cd\u4f5c\u81ea\u7136\u5408\u5e76\u8fdb\u53bb\uff0c\u4e0d\u8981\u7b80\u5355\u91cd\u590d\u3002\n\n"
+                "Below is today's already-generated journal. Keep the existing key points, merge in new activity naturally, "
+                "and avoid simple repetition.\n\n"
                 f"{previous_daily_content.strip()}\n\n"
             )
         slot_block = (
-            f"\u672c\u6b21\u65b0\u589e\u6d3b\u52a8\u65f6\u95f4\u6bb5\uff1a{window_label}\n\n"
+            f"New activity time window: {window_label}\n\n"
             if window_label
             else ""
         )
         user_prompt = (
-            "\u4e0b\u9762\u662f\u7528\u6237\u4eca\u5929\u5728 Personal Library \u7684\u4f7f\u7528\u8bb0\u5f55\uff0c\u8bf7\u751f\u6210\u4e00\u7bc7\u65e5\u5fd7\u3002\n\n"
+            "Below are the user's Personal Library activity records for today. Please generate a journal.\n\n"
             f"{previous_block}{slot_block}"
-            "\u8fd9\u662f\u672c\u6b21\u65b0\u589e\u6d3b\u52a8\uff1a\n\n"
+            "New activity:\n\n"
             f"{activity_text}"
         )
 
@@ -944,3 +940,4 @@ def run_scheduled_rollups(now: datetime | None = None) -> list[dict]:
         weekly_result = generate_weekly_journal_from_recent_daily(setting.user_id, now=current)
         results.append({"user_id": setting.user_id, "kind": "weekly", "result": weekly_result})
     return results
+

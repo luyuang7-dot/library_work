@@ -84,6 +84,10 @@ def index():
             flash("MinerU 设置已保存。", "success")
             return redirect(url_for("settings.index"))
 
+        if action != "save_ai_journal":
+            flash("未识别的设置操作。", "danger")
+            return redirect(url_for("settings.index"))
+
         agent.agent_name = (
             (request.form.get("agent_name") or "").strip()[:64] or DEFAULT_AGENT_NAME
         )
@@ -111,8 +115,8 @@ def index():
                 agent.api_key = api_key
 
         db.session.commit()
-        record_activity(current_user.id, "settings_save", "Saved AI Agent settings")
-        flash("AI 助手设置已保存。", "success")
+        record_activity(current_user.id, "settings_save", "Saved AI journal settings")
+        flash("AI 日志设置已保存。", "success")
         return redirect(url_for("settings.index"))
 
     return render_template(
