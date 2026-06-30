@@ -20,11 +20,10 @@ def save_uploaded_files(
 ) -> tuple[list[Path], list[str]]:
     upload_root = Path(current_app.config["UPLOAD_FOLDER"])
     allowed = current_app.config["ALLOWED_EXTENSIONS"]
-    user_dir = upload_root / str(user_id)
-    user_dir.mkdir(parents=True, exist_ok=True)
 
     saved: list[Path] = []
     skipped: list[str] = []
+    user_dir: Path | None = None
     for uploaded in files:
         if not uploaded or not uploaded.filename:
             continue
@@ -32,6 +31,10 @@ def save_uploaded_files(
         if ext not in allowed:
             skipped.append(uploaded.filename)
             continue
+
+        if user_dir is None:
+            user_dir = upload_root / str(user_id)
+            user_dir.mkdir(parents=True, exist_ok=True)
 
         original = secure_filename(uploaded.filename) or "file"
         stored = f"{uuid.uuid4().hex}.{ext}"
